@@ -207,7 +207,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return question.showRecipientNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
     }
 
-    private String getAnonEmail(FeedbackParticipantType type, String name) {
+    public String getAnonEmail(FeedbackParticipantType type, String name) {
         String anonName = getAnonName(type, name);
         return anonName + "@@" + anonName + ".com";
     }
