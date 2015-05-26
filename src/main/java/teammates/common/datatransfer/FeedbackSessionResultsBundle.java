@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Logger;
 
+import teammates.common.util.Assumption;
 import teammates.common.util.Const;
 import teammates.common.util.Utils;
 import teammates.logic.core.TeamEvalResult;
@@ -186,6 +187,25 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public boolean isGiverVisible(FeedbackResponseAttributes response) {
         return isFeedbackParticipantVisible(true, response);
     }
+    
+    /**
+     * Checks giver and recipient for the questions are both visible to the instructor
+     */
+    public boolean isBothGiverAndReceiverVisibleToInstructor(FeedbackQuestionAttributes question) {
+
+        return question.showGiverNameTo.contains(FeedbackParticipantType.INSTRUCTORS) 
+            && question.showRecipientNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
+    }
+    
+    public boolean isGiverVisibleToInstructor(FeedbackQuestionAttributes question) {
+
+        return question.showGiverNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
+    }
+    
+    public boolean isRecipientVisibleToInstructor(FeedbackQuestionAttributes question) {
+
+        return question.showRecipientNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
+    }
 
     private String getAnonEmail(FeedbackParticipantType type, String name) {
         String anonName = getAnonName(type, name);
@@ -197,7 +217,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return getAnonEmail(FeedbackParticipantType.STUDENTS, name);
     }
 
-    private String getAnonName(FeedbackParticipantType type, String name) {
+    public String getAnonName(FeedbackParticipantType type, String name) {
         String hash = getHashOfName(name);
         String anonName = type.toSingularFormString();
         anonName = "Anonymous " + anonName + " " + hash;
@@ -584,6 +604,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                 log.severe("Invalid giver type specified");
                 break;
         }
+        
+        
 
         return possibleGivers;
     }
@@ -1016,6 +1038,20 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                                                  .questionText);
     }
 
+    public List<String> getQuestionIdsSortedByQuestionNumber() {
+        List<FeedbackQuestionAttributes> questionsList = new ArrayList<FeedbackQuestionAttributes>();
+        for (Map.Entry<String, FeedbackQuestionAttributes> entry : questions.entrySet()) {
+            questionsList.add(entry.getValue());
+        }
+        Collections.sort(questionsList);
+        
+        List<String> questionIds = new ArrayList<String>();
+        for (FeedbackQuestionAttributes question : questionsList) {
+            questionIds.add(question.getId());
+        }
+        return questionIds;
+    }
+    
     // TODO: make responses to the student calling this method always on top.
     /**
      * Gets the questions and responses in this bundle as a map. 
@@ -1156,6 +1192,39 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         }
 
         return sortedMap;
+    }
+    
+    /**
+     * Returns responses as a map of {@code feedbackQuestionAttributes.getId()}, to giverIdentifier, to recipientIdentifier
+     * i.e. A response can be obtained by traversing the map in the order of feedbackQuestion > giverEmail > recipientEmail 
+     */
+    public Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> getQuestionResponseMapByQuestionGiverRecipient() {
+        Map<String, Map<String, Map<String, FeedbackResponseAttributes > > > result = new LinkedHashMap<String, Map<String, Map<String, FeedbackResponseAttributes>>>();
+        
+        for (FeedbackResponseAttributes response : responses) {
+            String questionId = response.feedbackQuestionId;
+            String giverIdentifier = response.giverEmail;
+            String recipientIdentifier = response.recipientEmail;
+            
+            Map<String, Map<String, FeedbackResponseAttributes > > giverToRecipientResponseMap;
+            Map<String, FeedbackResponseAttributes > recipientToResponseMap; 
+            giverToRecipientResponseMap = result.containsKey(questionId) ? 
+                                          result.get(questionId) :
+                                          new LinkedHashMap<String, Map<String, FeedbackResponseAttributes>>();
+            
+            recipientToResponseMap = giverToRecipientResponseMap.containsKey(giverIdentifier) ? 
+                                     giverToRecipientResponseMap.get(giverIdentifier) :
+                                     new LinkedHashMap<String, FeedbackResponseAttributes>();
+            
+            if (recipientToResponseMap.containsKey(recipientIdentifier)) {
+                Assumption.fail("Duplicate response id");
+            }
+            recipientToResponseMap.put(recipientIdentifier, response);
+            giverToRecipientResponseMap.put(giverIdentifier, recipientToResponseMap);
+            result.put(questionId, giverToRecipientResponseMap);
+        }
+        
+        return result;
     }
     
     /**

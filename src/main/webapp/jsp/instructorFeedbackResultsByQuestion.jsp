@@ -58,23 +58,28 @@
             <jsp:include page="<%=Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_TOP%>" />
             <br>
             <%
+                // map of (questionId > giverEmail > recipientEmail) > response
+                Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getQuestionResponseMapByQuestionGiverRecipient();
+
             	int questionIndex = -1;
-                            for (Map.Entry<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>> responseEntries : data.bundle
-                                    .getQuestionResponseMap().entrySet()) {
-                                questionIndex++;
-                                FeedbackQuestionAttributes question = responseEntries.getKey();
+                List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
+                for (String questionId : questionIds) {
+                    questionIndex++;
+                    FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
+
+                    boolean isQuestionWithResponse = responseBundle.get(questionId) != null && responseBundle.get(questionId).size() > 0;
             %>
-            <%
-                if (responseEntries.getValue().size() == 0) {
-            %>
-            <div class="panel panel-default">
-            <%
-                } else {
-            %>
-            <div class="panel panel-info">
-            <%
-                }
-            %>
+                <%
+                    if (!isQuestionWithResponse) {
+                %>
+                        <div class="panel panel-default">
+                <%
+                    } else {
+                %>
+                        <div class="panel panel-info">
+                <%
+                    }
+                %>
                 <div class="panel-heading<%=showAll ? "" : " ajax_submit"%>">
                     <form style="display:none;" id="seeMore-<%=question.questionNumber%>" class="seeMoreForm-<%=question.questionNumber%>" action="<%=Const.ActionURIs.INSTRUCTOR_FEEDBACK_RESULTS_PAGE%>">
                         <input type="hidden" name="<%=Const.ParamsNames.COURSE_ID%>" value="<%=data.bundle.feedbackSession.courseId%>">
@@ -100,21 +105,22 @@
                 <div class="panel-collapse collapse <%= showAll && !shouldCollapsed ? "in" : "" %>">
                 <div class="panel-body padding-0" id="questionBody-<%=questionIndex%>">
                     <%
-                        if (responseEntries.getValue().size() == 0){
+                        if (!isQuestionWithResponse){
                     %>
-                        <div class="col-sm-12">
-                            <i class="text-muted">There are no responses for this question.</i>
-                        </div>
+                            <div class="col-sm-12">
+                                <i class="text-muted">There are no responses for this question.</i>
+                            </div>
                     <%
-                        }
-                        if(showAll && responseEntries.getValue().size() > 0) {
-                    %>                
-                    <div class="resultStatistics">
-                        <%=questionDetails.getQuestionResultStatisticsHtml(responseEntries.getValue(), question, data, data.bundle, "question")%>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered dataTable margin-0">
-                            <thead class="background-color-medium-gray text-color-gray font-weight-normal">
+                        } else if (showAll) {  
+                            // display responses
+                    %>
+                            <div class="resultStatistics">
+                                <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.responses, question, data, data.bundle, "question")%>
+                            </div>
+                            
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered dataTable margin-0">
+                                <thead class="background-color-medium-gray text-color-gray font-weight-normal">
                                 <tr>
                                     <th id="button_sortFromName" class="button-sort-none" onclick="toggleSort(this,1)" style="width: 15%;">
                                         Giver
@@ -140,304 +146,176 @@
                                         Actions
                                     </th>
                                 </tr>
-                            <thead>
-                            <tbody>
-                                <%
-                                    if (responseEntries.getValue().size() > 0) {
-                                        
-                                      List<String> possibleGivers = data.bundle.getPossibleGivers(question);
-                                      
-                                      List<String> possibleReceivers = null;
-                                      boolean isNewGiver = true;
-                                      String prevGiver = "";
-                                    for(FeedbackResponseAttributes responseEntry: responseEntries.getValue()) {
-                                         if (!prevGiver.isEmpty() && !prevGiver.equals(responseEntry.giverEmail)) {
-                                            isNewGiver = true;   
-                                         }
-                                      	 
-                                      
-                                %>
-                                            
-                                <%
-                                                String giverName = data.bundle.getGiverNameForResponse(question, responseEntry);
-                                                String giverTeamName = data.bundle.getTeamNameForEmail(responseEntry.giverEmail);
-            
-                                                String recipientName = data.bundle.getRecipientNameForResponse(question, responseEntry);
-                                                String recipientTeamName = data.bundle.getTeamNameForEmail(responseEntry.recipientEmail);
-                                                
-                                                Boolean isGiverVisible = data.bundle.isGiverVisible(responseEntry);
+                                </thead>
+                                <tbody>
+                            <%
+                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);
+                            
+                            for (String giver : possibleGivers) {
+                                List<String> possibleReceivers;
+                                if (question.giverType.isTeam()) {
+                                    possibleReceivers = data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver));
+                                } else {
+                                    possibleReceivers = data.bundle.getPossibleRecipients(question, giver);
+                                }
+ 
+                                for (String recipient : possibleReceivers) {
+                                    //initialise parameters used for modifying appearance
+                                    String rowCssClass = "";
+                                    String cellCssClass = "middlealign";
 
-                                                if (!data.bundle.isGiverVisible(responseEntry) || !data.bundle.isRecipientVisible(responseEntry)) {
-                                                  possibleGivers.clear();
-                                                  if (possibleReceivers != null) {
-                                                    possibleReceivers.clear();
-                                                  }
-                                                }
-                                                
-                                                if (isNewGiver) {
-                                                   
-                                                  if (possibleReceivers != null && !possibleReceivers.isEmpty()) {
-                                                     for (String possibleReceiver : possibleReceivers) {
-                                                         
-                                                    	 if (questionDetails.shouldShowNoResponseText(prevGiver, possibleReceiver, question)) {
-                                %>
-                                                            <tr class="pending_response_row">
-                                                                
-                                                            	<td class="middlealign color_neutral">
-                                                            	    <%if (question.isGiverAStudent()) {%>
-                                                                    <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(prevGiver)%>">
-                                                                        <%=data.bundle.getFullNameFromRoster(prevGiver)%>
-                                                                        <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                    </div>                                
-                                                                    <%} else {%>                                                                    
-                                                                    <%=data.bundle.getFullNameFromRoster(prevGiver)%>                                               
-                                                                    <%}%>                                   
-                                                            	</td>                                                            	     
-                                                                <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(prevGiver)%></td>                                                                
-                                                                <td class="middlealign color_neutral">
-                                                                    <%if (question.isRecipientAStudent()) {%>
-                                                                    <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(possibleReceiver)%>">
-                                                                        <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                        <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                    </div>      
-                                                                    <%} else {%>                                                
-                                                                    <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                    <%}%>             
-                                                                </td>
-                                                                <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(possibleReceiver)%></td>
-                                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                                <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(prevGiver, possibleReceiver, data.bundle, question)%></td>
-                                                                <td>
-                                                                    <% 
-                                                                        boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(responseEntry.giverEmail), 
-                                                                                                                        data.feedbackSessionName, 
-                                                                                                                        Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                                                        String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
-                                                                        if (isGiverVisible) {
-                                                                    %>
-                                                                    <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
-                                                                        <input type="submit" class="btn btn-default btn-xs" value="Moderate Response" <%=disabledAttribute%> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
-                                                                        <input type="hidden" name="courseid" value="<%=data.courseId %>">
-                                                                        <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
-                                                                        <input type="hidden" name="moderatedquestion" value="<%= question.questionNumber%>">
-                                                                        <% if (responseEntry.giverEmail.matches(Const.REGEXP_TEAM)) { %>
-                                                                        <input type="hidden" name="moderatedstudent" value="<%= responseEntry.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER,"")%>">
-                                                                        <% } else { %>
-                                                                        <input type="hidden" name="moderatedstudent" value="<%= responseEntry.giverEmail%>">
-                                                                        <% } %>
-                                                                    </form>
-                                                                    <% } %>
-                                                                </td>
-                                                        	</tr>
-                                <%
-                                                         	}
-                                                      }
-                                                  }
-                                                            
-                                                  if (question.giverType == FeedbackParticipantType.TEAMS) {
-                                                     possibleGivers.remove(data.bundle.getFullNameFromRoster(responseEntry.giverEmail));
-                                                     possibleReceivers = data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(responseEntry.giverEmail));
-                                                  } else {
-                                                     possibleGivers.remove(responseEntry.giverEmail);
-                                                     possibleReceivers = data.bundle.getPossibleRecipients(question, responseEntry.giverEmail);
-                                                  }
-                                                            
-                                                            
-                                                   isNewGiver = false;
-                                                }
-                                %>
-                                            <tr>
-                                                <td class="middlealign">
-                                                    <%if (question.isGiverAStudent()) {%>
-                                                    <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(responseEntry.giverEmail)%>">
-                                                        <%=giverName%>
-                                                        <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                    </div>             
-                                                    <%} else {%>   
-                                                    <%=giverName%> 
-                                                    <%}%>                                   
-                                                </td>
-                                                <td class="middlealign"><%=giverTeamName%></td>
-                                                <td class="middlealign">
-                                                    <%if (question.isRecipientAStudent()) {%>
-                                                    <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(responseEntry.recipientEmail)%>">
-                                                        <%=recipientName%>
-                                                        <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                    </div>   
-                                                    <%} else {%> 
-                                                    <%=recipientName%> 
-                                                    <%}%>                                                   
-                                                </td>
-                                                <td class="middlealign"><%=recipientTeamName%></td>
-                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(responseEntry, question)%></td>
-                                                <td>
-                                                    <% 
-                                                        boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(responseEntry.giverEmail), 
-                                                                                                        data.feedbackSessionName, 
-                                                                                                        Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                                        String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
-                                                        if (isGiverVisible) {
-                                                    %>
-                                                    <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
-                                                        <input type="submit" class="btn btn-default btn-xs" value="Moderate Response" <%=disabledAttribute%> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
-                                                        <input type="hidden" name="courseid" value="<%=data.courseId %>">
-                                                        <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
-                                                        <input type="hidden" name="moderatedquestion" value="<%= question.questionNumber%>">
-                                                        <% if (responseEntry.giverEmail.matches(Const.REGEXP_TEAM)) { %>
-                                                        <input type="hidden" name="moderatedstudent" value="<%= responseEntry.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER,"")%>">
-                                                        <% } else { %>
-                                                        <input type="hidden" name="moderatedstudent" value="<%= responseEntry.giverEmail%>">
-                                                        <% } %>
-                                                    </form>
-                                                    <% } %>
-                                                </td>
-                                            </tr>        
-                                <%
-                                        	if (question.recipientType == FeedbackParticipantType.TEAMS) {
-                                                possibleReceivers.remove(data.bundle.getFullNameFromRoster(responseEntry.recipientEmail)); 
-                                            } else {
-                                            	possibleReceivers.remove(responseEntry.recipientEmail);
-                                            }
-                                            prevGiver = responseEntry.giverEmail;
+                                    boolean isShowingMissingResponseRow = false; 
+
+                                    String giverName;
+                                    String giverTeamName;
+                                    String recipientName;
+                                    String recipientTeamName;
+                                    Boolean isGiverVisible = data.bundle.isGiverVisibleToInstructor(question);
+
+                                    String giverDisplayableIdentifier;
+                                    String recipientDisplayableIdentifier;
+
+                                    FeedbackResponseAttributes responseForQuestionGiverRecipient = null;
+
+                                    if (!data.bundle.isGiverVisibleToInstructor(question)) {
+                                        FeedbackParticipantType participantType = question.giverType;
+                                        giverDisplayableIdentifier = data.bundle.getAnonEmailFromEmail(giver);
+                                    } else {
+                                        giverDisplayableIdentifier = giver;
                                     }
-                                                                                                                      
-                                            if (possibleReceivers != null && !possibleReceivers.isEmpty()) {
-                                                // print missing responses to possible recipient from the last giver
-                                                for (String possibleReceiver : possibleReceivers) {
-                                                    if (!data.selectedSection.equals("All") && !data.bundle.getSectionFromRoster(possibleReceiver).equals(data.selectedSection)) {
-                                                       continue;
-                                                    }
-                                                
-                                          		    if (questionDetails.shouldShowNoResponseText(prevGiver, possibleReceiver, question)) {
-                                %>
-                                                        <tr class="pending_response_row">
-                                                            <td class="middlealign color_neutral">
-                                                                <%if (question.isGiverAStudent()) {%>
-                                                                <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(prevGiver)%>">
-                                                                    <%=data.bundle.getFullNameFromRoster(prevGiver)%>
-                                                                    <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                </div>       
-                                                                <%} else {%>
-                                                                <%=data.bundle.getFullNameFromRoster(prevGiver)%>
-                                                                <%}%>                                                            
-                                                            </td>
-                                                            <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(prevGiver)%></td>
-                                                            <td class="middlealign color_neutral">
-                                                                <%if (question.isRecipientAStudent()) {%>
-                                                                <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(possibleReceiver)%>">
-                                                                    <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                    <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                </div>  
-                                                                <%} else {%>
-                                                                <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                <%}%>                                                                 
-                                                            </td>
-                                                            <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(possibleReceiver)%></td>
-                                                            <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                            <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(prevGiver, possibleReceiver, data.bundle, question)%></td>
-                                                            <td>
-                                                                <% 
-                                                                    boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(prevGiver), 
-                                                                                                                                    data.feedbackSessionName, 
-                                                                                                                                    Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                                                    String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
-                                                                %>
-                                                                <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
-                                                                    <input type="submit" class="btn btn-default btn-xs" value="Moderate Response" <%=disabledAttribute%> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
-                                                                    <input type="hidden" name="courseid" value="<%=data.courseId %>">
-                                                                    <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
-                                                                    <input type="hidden" name="moderatedquestion" value="<%= question.questionNumber%>">
-                                                                    <% if (prevGiver.matches(Const.REGEXP_TEAM)) { %>
-                                                                    <input type="hidden" name="moderatedstudent" value="<%= prevGiver.replace(Const.TEAM_OF_EMAIL_OWNER,"")%>">
-                                                                    <% } else { %>
-                                                                    <input type="hidden" name="moderatedstudent" value="<%= prevGiver%>">
-                                                                    <% } %>
-                                                                </form>
-                                                            </td>
-                                                        </tr>
-                                <%
-                                              	    }
-                                                }
-                                                if (question.giverType == FeedbackParticipantType.TEAMS) {
-                                                    possibleGivers.remove(data.bundle.getNameForEmail(prevGiver)); 
-                                                } else {
-                                                    possibleGivers.remove(prevGiver);
-                                                }
-                                                    
+                                    if (!data.bundle.isRecipientVisibleToInstructor(question)) {
+                                        FeedbackParticipantType participantType = question.recipientType;
+                                        recipientDisplayableIdentifier = data.bundle.getAnonEmailFromEmail(recipient);
+                                    } else {
+                                        recipientDisplayableIdentifier = recipient;
+                                    }
+
+                                    // obtain response from responseBundle
+                                    boolean isResponseExist = responseBundle.get(questionId).containsKey(giverDisplayableIdentifier) 
+                                                              && responseBundle.get(questionId).get(giverDisplayableIdentifier).
+                                                                                           containsKey(recipientDisplayableIdentifier);
+
+                                    if (!isResponseExist) {
+                                        // show 'missing' responses if both giver and recipient are anonymous to instructors in general
+                                        if (data.bundle.isBothGiverAndReceiverVisibleToInstructor(question)) {
+                                            // set parameters for displaying 'missing' response row
+                                            rowCssClass = "pending_response_row";
+                                            cellCssClass += " color_neutral";
+
+                                            isShowingMissingResponseRow = true;
+
+                                            // prepare data for 'missing' response row
+                                            giverName = data.bundle.isGiverVisibleToInstructor(question) ? 
+                                                        data.bundle.getFullNameFromRoster(giverDisplayableIdentifier) :
+                                                        data.bundle.getAnonName(question.giverType, giverDisplayableIdentifier);
+                                            giverTeamName = data.bundle.isGiverVisibleToInstructor(question) ?
+                                                            data.bundle.getTeamNameFromRoster(giverDisplayableIdentifier) :
+                                                            data.bundle.getTeamNameForEmail(giverDisplayableIdentifier);
+
+                                            recipientName = data.bundle.isRecipientVisibleToInstructor(question) ? 
+                                                            data.bundle.getFullNameFromRoster(recipientDisplayableIdentifier) :
+                                                            data.bundle.getAnonName(question.recipientType, recipientDisplayableIdentifier);
+                                            recipientTeamName = data.bundle.isRecipientVisibleToInstructor(question) ? 
+                                                                data.bundle.getTeamNameFromRoster(recipientDisplayableIdentifier) :
+                                                                data.bundle.getTeamNameForEmail(recipientDisplayableIdentifier);
+
+                                        } else {
+                                            // skip to next recipient
+                                            // since there is no need to display any row for this (questionId, giver, recipient)
+                                            continue;
+                                        }
+                                    } else {
+                                        // get response and prepare data for displaying response
+                                        responseForQuestionGiverRecipient = responseBundle.get(questionId).
+                                                                                                        get(giverDisplayableIdentifier).
+                                                                                                        get(recipientDisplayableIdentifier);
+                                        giverName = data.bundle.getGiverNameForResponse(question, responseForQuestionGiverRecipient);
+                                        giverTeamName = data.bundle.getTeamNameForEmail(responseForQuestionGiverRecipient.giverEmail);
+
+                                        recipientName = data.bundle.getRecipientNameForResponse(question, responseForQuestionGiverRecipient);
+                                        recipientTeamName = data.bundle.getTeamNameForEmail(responseForQuestionGiverRecipient.recipientEmail);
+                                    }
+        
+
+                                    // display contents of 1 response
+
+                            %>
+                                    <tr <%= rowCssClass.isEmpty() ? "" : "class=\"pending_response_row\"" %> >
+                                        <td class=<%= cellCssClass %> >
+                                            <%if (question.isGiverAStudent()) {%>
+                                            <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(giverDisplayableIdentifier)%>">
+                                                <%=giverName%>
+                                                <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
+                                            </div>             
+                                            <%} else {%>   
+                                            <%=giverName%> 
+                                            <%}%>                                   
+                                        </td>
+                                        <td class=<%= cellCssClass %>><%=giverTeamName%></td>
+                                        <td class=<%= cellCssClass %>>
+                                            <%if (question.isRecipientAStudent()) {%>
+                                            <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(recipientDisplayableIdentifier)%>">
+                                                <%=recipientName%>
+                                                <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
+                                            </div>   
+                                            <%} else {%> 
+                                            <%=recipientName%> 
+                                            <%}%>                                                   
+                                        </td>
+                                        <td class=<%= cellCssClass %>><%=recipientTeamName%></td>
+                                        <%
+                                            if (isShowingMissingResponseRow) {
+                                        %>
+                                                <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giverDisplayableIdentifier, recipientDisplayableIdentifier, data.bundle, question)%></td>
+                                        <%
+                                            }  else {
+                                        %>
+                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(responseForQuestionGiverRecipient, question)%></td>
+                                        <%
                                             }
-                                                  
-                                            if (possibleGivers != null && !possibleGivers.isEmpty()) {
-                                                // print remaining possible givers and recipient pairs
-                                                for (String possibleGiver : possibleGivers) {
-                                                
-                                                	if (!data.selectedSection.equals("All") && !data.bundle.getSectionFromRoster(possibleGiver).equals(data.selectedSection)) {
-                                                        continue;
-                                                    }
-                                                  	possibleReceivers = data.bundle.getPossibleRecipients(question, possibleGiver);
-                                                  	for (String possibleReceiver : possibleReceivers) {
-                                                  		if (!data.selectedSection.equals("All") && !data.bundle.getSectionFromRoster(possibleReceiver).equals(data.selectedSection)) {
-                                                  	       continue;
-                                                        }
-                                                  		if (questionDetails.shouldShowNoResponseText(possibleGiver, possibleReceiver, question)) {
-                                %>
-                                                          <tr class="pending_response_row">
-                                                              <td class="middlealign color_neutral">
-                                                                  <%if (question.isGiverAStudent()) {%>
-                                                                  <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(possibleGiver)%>">
-                                                                      <%=data.bundle.getFullNameFromRoster(possibleGiver)%>
-                                                                      <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                  </div>
-                                                                  <%} else {%>
-                                                                  <%=data.bundle.getFullNameFromRoster(possibleGiver)%>
-                                                                  <%}%>                                                                   
-                                                              </td>
-                                                              <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(possibleGiver)%></td>
-                                                              <td class="middlealign color_neutral">
-                                                                  <%if (question.isRecipientAStudent()) {%>
-                                                                  <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(possibleReceiver)%>">
-                                                                      <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                      <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                                                  </div>
-                                                                  <%} else {%>
-                                                                  <%=data.bundle.getFullNameFromRoster(possibleReceiver)%>
-                                                                  <%}%>                                                                   
-                                                              </td>
-                                                              <td class="middlealign color_neutral"><%=data.bundle.getTeamNameFromRoster(possibleReceiver)%></td>
-                                                              <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                              <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(possibleGiver, possibleReceiver, data.bundle, question)%></td>
-                                                              <td>
-                                                                <% 
-                                                                    boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(possibleGiver), 
-                                                                                                                                    data.feedbackSessionName, 
-                                                                                                                                    Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                                                    String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
-                                                                %>
-                                                                <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
-                                                                    <input type="submit" class="btn btn-default btn-xs" value="Moderate Response" <%=disabledAttribute%> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
-                                                                    <input type="hidden" name="courseid" value="<%=data.courseId %>">
-                                                                    <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
-                                                                    <input type="hidden" name="moderatedquestion" value="<%= question.questionNumber%>">
-                                                                    <% if (possibleGiver.matches(Const.REGEXP_TEAM)) { %>
-                                                                    <input type="hidden" name="moderatedstudent" value="<%= possibleGiver.replace(Const.TEAM_OF_EMAIL_OWNER,"")%>">
-                                                                    <% } else { %>
-                                                                    <input type="hidden" name="moderatedstudent" value="<%= possibleGiver%>">
-                                                                    <% } %>
-                                                                </form>
-                                                              </td>
-                                                          </tr>
-                                <% 
-                                          		        }
-                                          	        }
-                                                }
-                                            }
-                                    } 
-                                
-                                %>
+
+                                        %>
+                                        <td>
+                                            <% 
+                                                boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(giverDisplayableIdentifier), 
+                                                                                                data.feedbackSessionName, 
+                                                                                                Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
+                                                String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
+                                                if (isGiverVisible) {
+                                            %>
+                                            <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
+                                                <input type="submit" class="btn btn-default btn-xs" value="Moderate Response" <%=disabledAttribute%> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
+                                                <input type="hidden" name="courseid" value="<%=data.courseId %>">
+                                                <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
+                                                <input type="hidden" name="moderatedquestion" value="<%= question.questionNumber%>">
+                                                <% if (giverDisplayableIdentifier.matches(Const.REGEXP_TEAM)) { %>
+                                                       <input type="hidden" name="moderatedstudent" value="<%= giverDisplayableIdentifier.replace(Const.TEAM_OF_EMAIL_OWNER,"")%>">
+                                                <% } else { %>
+                                                       <input type="hidden" name="moderatedstudent" value="<%= giverDisplayableIdentifier%>">
+                                                <% } %>
+                                            </form>
+                                            <% } %>
+                                        </td>
+                                    </tr> 
+    
+                            <%
+                                    //end of displaying of 1 response
+                                }  // end of recipient loop
+
+
+                            } // end of giver loop
+                            %>
+
                             </tbody>
                         </table>
                     </div>
-                    <% } %>
+                      
+                    <%
+                        } // end of display responses
+
+                    %>
+                    
                 </div>
                 </div>
             </div>
