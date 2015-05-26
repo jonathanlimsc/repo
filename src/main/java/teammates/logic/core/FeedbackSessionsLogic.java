@@ -1856,27 +1856,26 @@ public class FeedbackSessionsLogic {
                                     question, userEmail, Role.INSTRUCTOR, null);
                 }
 
-                boolean thisQuestionHasResponses = (!responsesForThisQn
-                        .isEmpty());
-                if (thisQuestionHasResponses) {
-                    relevantQuestions.put(question.getId(),
-                            question);
+                boolean isQuestionWithResponses = (!responsesForThisQn.isEmpty());
+                if (isQuestionWithResponses) {
+                    relevantQuestions.put(question.getId(), question);
+                    
                     for (FeedbackResponseAttributes response : responsesForThisQn) {
-                        boolean isVisibleResponse = false;
+                        boolean isAccessibleResponse = false;
                         if ((response.giverEmail.equals(userEmail))
-                                || (response.recipientEmail.equals(userEmail) && question
-                                        .isResponseVisibleTo(FeedbackParticipantType.RECEIVER))
-                                || (role == Role.INSTRUCTOR && question
-                                        .isResponseVisibleTo(FeedbackParticipantType.INSTRUCTORS))
-                                || (role == Role.STUDENT && question
-                                        .isResponseVisibleTo(FeedbackParticipantType.STUDENTS))) {
-                            isVisibleResponse = true;
+                             || (response.recipientEmail.equals(userEmail) 
+                                 && question.isResponseVisibleTo(FeedbackParticipantType.RECEIVER))
+                             || (role == Role.INSTRUCTOR 
+                                 && question.isResponseVisibleTo(FeedbackParticipantType.INSTRUCTORS))
+                             || (role == Role.STUDENT 
+                                 && question.isResponseVisibleTo(FeedbackParticipantType.STUDENTS))) {
+                            isAccessibleResponse = true;
                         }
                         InstructorAttributes instructor = null;
                         if (role == Role.INSTRUCTOR) {
                             instructor = instructorsLogic.getInstructorForEmail(courseId, userEmail);
                         }
-                        if (isVisibleResponse && instructor != null) {
+                        if (isAccessibleResponse && instructor != null) {
                             boolean isGiverSectionRestricted 
                                     = !(instructor.isAllowedForPrivilege(response.giverSection,
                                                                          response.feedbackSessionName, 
@@ -1890,32 +1889,32 @@ public class FeedbackSessionsLogic {
                                                                          Const.ParamsNames.INSTRUCTOR_PERMISSION_VIEW_SESSION_IN_SECTIONS));
                             boolean isNotAllowedForInstructor = isGiverSectionRestricted || isRecipientSectionRestricted;
                             if (isNotAllowedForInstructor) {
-                                isVisibleResponse = false;
+                                isAccessibleResponse = false;
                             }
                         }
-                        if (isVisibleResponse) {
+                        if (isAccessibleResponse) {
                             responses.add(response);
                             addEmailNamePairsToTable(emailNameTable, response,
                                     question, roster);
                             addEmailLastNamePairsToTable(emailLastNameTable, response,
                                     question, roster);
                             addEmailTeamNamePairsToTable(emailTeamNameTable,
-                                    response,
-                                    question, roster);
+                                    response, question, roster);
                             addVisibilityToTable(visibilityTable, question,
                                     response, userEmail, role, roster);
                         }
-                        isVisibleResponse = false;
+                        isAccessibleResponse = false;
                     }
-
                 }
             }
-            boolean needResponseStatus = questionNumber == QUESTION_NUM_FOR_RESPONSE_RATE;
-            if (needResponseStatus) {
-              responseStatus = (section == null && isIncludeResponseStatus) 
-                              ? getFeedbackSessionResponseStatus(session, roster, allQuestions) 
-                              : null;
+            
+            boolean isResponseStatusNeeded = questionNumber == QUESTION_NUM_FOR_RESPONSE_RATE;
+            if (isResponseStatusNeeded) {
+                responseStatus = (section == null && isIncludeResponseStatus) 
+                               ? getFeedbackSessionResponseStatus(session, roster, allQuestions) 
+                               : null;
             }
+            
             FeedbackSessionResultsBundle results =
                     new FeedbackSessionResultsBundle(
                             session, responses, relevantQuestions,
