@@ -61,6 +61,7 @@
                 // map of (questionId > giverEmail > recipientEmail) > response
                 Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getQuestionResponseMapByQuestionGiverRecipient();
 
+
             	int questionIndex = -1;
                 List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
                 for (String questionId : questionIds) {
@@ -115,7 +116,7 @@
                             // display responses
                     %>
                             <div class="resultStatistics">
-                                <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.responses, question, data, data.bundle, "question")%>
+                                <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.filterResponsesForQuestion(responseBundle, question.getId()), question, data, data.bundle, "question")%>
                             </div>
                             
                             <div class="table-responsive">
@@ -179,13 +180,14 @@
 
                                     if (!data.bundle.isGiverVisibleToInstructor(question)) {
                                         FeedbackParticipantType participantType = question.giverType;
-                                        giverDisplayableIdentifier = data.bundle.getAnonEmailFromEmail(giver);
+
+                                        giverDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(giver));
                                     } else {
                                         giverDisplayableIdentifier = giver;
                                     }
                                     if (!data.bundle.isRecipientVisibleToInstructor(question)) {
                                         FeedbackParticipantType participantType = question.recipientType;
-                                        recipientDisplayableIdentifier = data.bundle.getAnonEmailFromEmail(recipient);
+                                        recipientDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(recipient));
                                     } else {
                                         recipientDisplayableIdentifier = recipient;
                                     }
@@ -204,17 +206,19 @@
 
                                             isShowingMissingResponseRow = true;
 
-                                            // prepare data for 'missing' response row
+                                            // prepare data for 'missing' response row.
+                                            // depending on whether the giver/recipient is anonymous,
+                                            // populate the 
                                             giverName = data.bundle.isGiverVisibleToInstructor(question) ? 
                                                         data.bundle.getFullNameFromRoster(giverDisplayableIdentifier) :
-                                                        data.bundle.getAnonName(question.giverType, giverDisplayableIdentifier);
+                                                        data.bundle.getNameForEmail( giverDisplayableIdentifier);
                                             giverTeamName = data.bundle.isGiverVisibleToInstructor(question) ?
                                                             data.bundle.getTeamNameFromRoster(giverDisplayableIdentifier) :
                                                             data.bundle.getTeamNameForEmail(giverDisplayableIdentifier);
 
                                             recipientName = data.bundle.isRecipientVisibleToInstructor(question) ? 
                                                             data.bundle.getFullNameFromRoster(recipientDisplayableIdentifier) :
-                                                            data.bundle.getAnonName(question.recipientType, recipientDisplayableIdentifier);
+                                                            data.bundle.getNameForEmail(recipientDisplayableIdentifier);
                                             recipientTeamName = data.bundle.isRecipientVisibleToInstructor(question) ? 
                                                                 data.bundle.getTeamNameFromRoster(recipientDisplayableIdentifier) :
                                                                 data.bundle.getTeamNameForEmail(recipientDisplayableIdentifier);
@@ -227,8 +231,9 @@
                                     } else {
                                         // get response and prepare data for displaying response
                                         responseForQuestionGiverRecipient = responseBundle.get(questionId).
-                                                                                                        get(giverDisplayableIdentifier).
-                                                                                                        get(recipientDisplayableIdentifier);
+                                                                            get(giverDisplayableIdentifier).
+                                                                            get(recipientDisplayableIdentifier);
+
                                         giverName = data.bundle.getGiverNameForResponse(question, responseForQuestionGiverRecipient);
                                         giverTeamName = data.bundle.getTeamNameForEmail(responseForQuestionGiverRecipient.giverEmail);
 
@@ -238,7 +243,6 @@
         
 
                                     // display contents of 1 response
-
                             %>
                                     <tr <%= rowCssClass.isEmpty() ? "" : "class=\"pending_response_row\"" %> >
                                         <td class=<%= cellCssClass %> >
@@ -266,6 +270,7 @@
                                         <%
                                             if (isShowingMissingResponseRow) {
                                         %>
+                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
                                                 <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giverDisplayableIdentifier, recipientDisplayableIdentifier, data.bundle, question)%></td>
                                         <%
                                             }  else {

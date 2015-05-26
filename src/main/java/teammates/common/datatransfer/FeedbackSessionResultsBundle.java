@@ -1227,6 +1227,21 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return result;
     }
     
+    public List<FeedbackResponseAttributes> filterResponsesForQuestion(Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle, String questionId) {
+        Map<String, Map<String, FeedbackResponseAttributes>> responsesMapOfGiverAndRecipient = responseBundle.get(questionId);
+        
+        List<FeedbackResponseAttributes> responses = new ArrayList<FeedbackResponseAttributes>();
+        for (Map.Entry<String, Map<String, FeedbackResponseAttributes>> giverRecipientEntry : responsesMapOfGiverAndRecipient.entrySet()) {
+            for (Map.Entry<String, FeedbackResponseAttributes> recipientEntry : giverRecipientEntry.getValue().entrySet()) {
+                FeedbackResponseAttributes response = recipientEntry.getValue();
+                responses.add(response);
+            }
+        }
+        
+        return responses;
+    }
+    
+    
     /**
      * Returns responses as a Map<recipientName, Map<question, List<response>>>
      * Where the responses are sorted in the order of recipient, question, giver.
