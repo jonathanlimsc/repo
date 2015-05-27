@@ -153,17 +153,15 @@
                             List<String> possibleGivers = data.bundle.getPossibleGivers(question);
                             
                             for (String giver : possibleGivers) {
-                                List<String> possibleReceivers;
-                                if (question.giverType.isTeam()) {
-                                    possibleReceivers = data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver));
-                                } else {
-                                    possibleReceivers = data.bundle.getPossibleRecipients(question, giver);
-                                }
+                                List<String> possibleReceivers = question.giverType.isTeam() ? 
+                                                                 data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
+                                                                 data.bundle.getPossibleRecipients(question, giver);
+
  
                                 for (String recipient : possibleReceivers) {
                                     //initialise parameters used for modifying appearance
                                     String rowCssClass = "";
-                                    String cellCssClass = "middlealign";
+                                    String cellCssClass = "";
 
                                     boolean isShowingMissingResponseRow = false; 
 
@@ -177,15 +175,15 @@
                                     String recipientDisplayableIdentifier;
 
                                     FeedbackResponseAttributes responseForQuestionGiverRecipient = null;
-
-                                    if (!data.bundle.isGiverVisibleToInstructor(question)) {
+                                    boolean isGiverAnonymous = !data.bundle.isGiverVisibleToInstructor(question);
+                                    if (isGiverAnonymous && !data.instructor.email.equals(giver)) {
                                         FeedbackParticipantType participantType = question.giverType;
-
                                         giverDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(giver));
                                     } else {
                                         giverDisplayableIdentifier = giver;
                                     }
-                                    if (!data.bundle.isRecipientVisibleToInstructor(question)) {
+                                    boolean isRecipientAnonymous = !data.bundle.isRecipientVisibleToInstructor(question);
+                                    if (isRecipientAnonymous && !data.instructor.email.equals(giver)) {
                                         FeedbackParticipantType participantType = question.recipientType;
                                         recipientDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(recipient));
                                     } else {
@@ -198,11 +196,12 @@
                                                                                            containsKey(recipientDisplayableIdentifier);
 
                                     if (!isResponseExist) {
+                                        // set parameters for displaying 'missing' response row
+                                        rowCssClass = "pending_response_row";
+                                        cellCssClass = "class=\"middlealign color_neutral\"";
+
                                         // show 'missing' responses if both giver and recipient are anonymous to instructors in general
                                         if (data.bundle.isBothGiverAndReceiverVisibleToInstructor(question)) {
-                                            // set parameters for displaying 'missing' response row
-                                            rowCssClass = "pending_response_row";
-                                            cellCssClass += " color_neutral";
 
                                             isShowingMissingResponseRow = true;
 
@@ -229,6 +228,8 @@
                                             continue;
                                         }
                                     } else {
+                                        cellCssClass = "class = \"middlealign\"";
+
                                         // get response and prepare data for displaying response
                                         responseForQuestionGiverRecipient = responseBundle.get(questionId).
                                                                             get(giverDisplayableIdentifier).
@@ -245,7 +246,7 @@
                                     // display contents of 1 response
                             %>
                                     <tr <%= rowCssClass.isEmpty() ? "" : "class=\"pending_response_row\"" %> >
-                                        <td class=<%= cellCssClass %> >
+                                        <td <%= cellCssClass %> >
                                             <%if (question.isGiverAStudent()) {%>
                                             <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(giverDisplayableIdentifier)%>">
                                                 <%=giverName%>
@@ -255,8 +256,8 @@
                                             <%=giverName%> 
                                             <%}%>                                   
                                         </td>
-                                        <td class=<%= cellCssClass %>><%=giverTeamName%></td>
-                                        <td class=<%= cellCssClass %>>
+                                        <td <%= cellCssClass %>><%=giverTeamName%></td>
+                                        <td <%= cellCssClass %>>
                                             <%if (question.isRecipientAStudent()) {%>
                                             <div class="profile-pic-icon-hover" data-link="<%=data.getProfilePictureLink(recipientDisplayableIdentifier)%>">
                                                 <%=recipientName%>
@@ -266,7 +267,7 @@
                                             <%=recipientName%> 
                                             <%}%>                                                   
                                         </td>
-                                        <td class=<%= cellCssClass %>><%=recipientTeamName%></td>
+                                        <td <%= cellCssClass %>><%=recipientTeamName%></td>
                                         <%
                                             if (isShowingMissingResponseRow) {
                                         %>
@@ -300,10 +301,9 @@
                                                        <input type="hidden" name="moderatedstudent" value="<%= giverDisplayableIdentifier%>">
                                                 <% } %>
                                             </form>
-                                            <% } %>
+                                            <%  }  %>
                                         </td>
-                                    </tr> 
-    
+                                    </tr>
                             <%
                                     //end of displaying of 1 response
                                 }  // end of recipient loop
