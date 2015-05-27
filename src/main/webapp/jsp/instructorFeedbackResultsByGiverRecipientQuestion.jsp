@@ -231,24 +231,35 @@
                         giverTeams.add(Const.DEFAULT_SECTION);
                     }
 
-                    // iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
+                    if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                        Set<String> anonymousGivers = data.bundle.anonymousGiversInSection.get(section); 
+                        for (String anonymousGiver : anonymousGivers) {
+                            giverTeams.add(data.bundle.getTeamNameForEmail(anonymousGiver));
+                        }
+                    }
+
+                    // Iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
                     for (String team : giverTeams) {
                         List<String> givers;
-                        if (groupByTeamEnabled) {
+
+                        // Prepare feedback givers in the current team
+                        boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
+                                               && data.bundle.emailTeamNameTable.containsKey(team);
+
+                        if (groupByTeamEnabled && !isAnonymousTeam) {
                             givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
-                            if (data.bundle.anonymousGiversInTeam.containsKey(team)) {
-                                givers.addAll(data.bundle.anonymousGiversInTeam.get(team));
-                            }
+                        } else if (groupByTeamEnabled && isAnonymousTeam) {
+                            givers = new ArrayList<String>();
+                            String giverName = team;
+                            giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                            givers.add(giverName);
                         } else {
                             givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
-                            for (String teamOfCurrentSection : data.bundle.rosterSectionTeamNameTable.get(section)) {
-                                if (data.bundle.anonymousGiversInTeam.containsKey(teamOfCurrentSection)) {
-                            	   givers.addAll(data.bundle.anonymousGiversInTeam.get(teamOfCurrentSection));    
-                                }
+                            for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
+                            	givers.addAll(data.bundle.anonymousGiversInSection.get(anonymousGiver));
                             }
                         }
                         
-
                         if (groupByTeamEnabled) {
                             // Display header of group
                 %>
