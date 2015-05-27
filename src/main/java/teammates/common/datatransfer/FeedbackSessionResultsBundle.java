@@ -1030,25 +1030,40 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public String getRecipientNameForResponse(FeedbackQuestionAttributes question,
                                               FeedbackResponseAttributes response) {
         String name = emailNameTable.get(response.recipientEmail);
-        if (name == null || name.equals(Const.USER_IS_TEAM)) {
-            return Const.USER_UNKNOWN_TEXT; // TODO: this doesn't look right
-        } else if (name.equals(Const.USER_IS_NOBODY)) {
-            return Const.USER_NOBODY_TEXT;
-        } else {
-            return PageData.sanitizeForHtml(name);
-        }
+        return getDisplayableName(name);
     }
 
     public String getGiverNameForResponse(FeedbackQuestionAttributes question,
                                           FeedbackResponseAttributes response) {
         String name = emailNameTable.get(response.giverEmail);
-        if (name == null || name.equals(Const.USER_IS_TEAM)) {
+        return getDisplayableName(name);
+    }
+    
+    public String getDisplayableName(String participantIdentifier) {
+        if (participantIdentifier == null || participantIdentifier.equals(Const.USER_IS_TEAM)) {
             return Const.USER_UNKNOWN_TEXT;
-        } else if (name.equals(Const.USER_IS_NOBODY)) {
+        } else if (participantIdentifier.equals(Const.USER_IS_NOBODY)) {
             return Const.USER_NOBODY_TEXT;
         } else {
-            return PageData.sanitizeForHtml(name);
+            return PageData.sanitizeForHtml(participantIdentifier);
         }
+    }
+    
+    public String getNameWithTeamName(String participantIdentifier) {
+        String name;
+        String teamName;
+        // If participantIdentifier has given a response before,
+        if (emailNameTable.containsKey(participantIdentifier)) {
+            name = emailNameTable.get(participantIdentifier);
+            // obtain the team name from emailTeamNameTable, which is built using the responses
+            teamName = emailTeamNameTable.get(participantIdentifier);
+        } else {
+            name = getNameFromRoster(participantIdentifier, true);
+            // otherwise use the roster data
+            teamName = getTeamNameFromRoster(participantIdentifier);
+        }
+        
+        return appendTeamNameToName(name, teamName);
     }
 
     public String appendTeamNameToName(String name, String teamName) {
