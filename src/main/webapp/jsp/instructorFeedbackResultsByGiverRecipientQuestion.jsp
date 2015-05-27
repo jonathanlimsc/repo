@@ -233,9 +233,21 @@
 
                     // iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
                     for (String team : giverTeams) {
-                        List<String> givers = groupByTeamEnabled ? 
-                                              new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team)) : 
-                                              new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
+                        List<String> givers;
+                        if (groupByTeamEnabled) {
+                            givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
+                            if (data.bundle.anonymousGiversInTeam.containsKey(team)) {
+                                givers.addAll(data.bundle.anonymousGiversInTeam.get(team));
+                            }
+                        } else {
+                            givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
+                            for (String teamOfCurrentSection : data.bundle.rosterSectionTeamNameTable.get(section)) {
+                                if (data.bundle.anonymousGiversInTeam.containsKey(teamOfCurrentSection)) {
+                            	   givers.addAll(data.bundle.anonymousGiversInTeam.get(teamOfCurrentSection));    
+                                }
+                            }
+                        }
+                        
 
                         if (groupByTeamEnabled) {
                             // Display header of group
@@ -323,7 +335,6 @@
                                 Collections.sort(possibleRecipientsForGiver);
                                 int recipientIndex = 1;
                                 for (String recipient : possibleRecipientsForGiver) {
-                                    
                                     String recipientIdentifier = data.bundle.getNameWithTeamName(recipient);
 
                         %>
@@ -371,8 +382,9 @@
                                             String questionId = questionEntry.getKey();
                                             FeedbackQuestionAttributes question = questionEntry.getValue();
 
-                                            if (!responseBundle.get(questionId).get(giver).containsKey(recipient)) {
-                                                continue;
+                                            if (!responseBundle.get(questionId).containsKey(giver) || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                // no response for current (question, giver, recipient)
+                                                continue;   
                                             }
                                             FeedbackResponseAttributes singleResponse = responseBundle.get(questionId).get(giver).get(recipient);
                                             FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
