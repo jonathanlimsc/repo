@@ -59,7 +59,7 @@
             <br>
             <%
                 // map of (questionId > giverEmail > recipientEmail) > response
-                Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getQuestionResponseMapByQuestionGiverRecipient();
+                Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getResponseBundle();
 
 
             	int questionIndex = -1;

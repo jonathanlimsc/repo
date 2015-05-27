@@ -33,7 +33,10 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public Map<String, String> emailTeamNameTable = null;
     public Map<String, Set<String>> rosterTeamNameMembersTable = null;
     public Map<String, Set<String>> rosterSectionTeamNameTable = null;
+    public Map<String, Set<String>> rosterSectionStudentTable = null;
     public Map<String, boolean[]> visibilityTable = null;
+    public Map<String, Set<String>> possibleRecipientsForGiver = null;
+    public Map<String, Set<String>> possibleGiversForRecipient = null;
     public FeedbackSessionResponseStatus responseStatus = null;
     public CourseRoster roster = null;
     public Map<String, List<FeedbackResponseCommentAttributes>> responseComments = null;
@@ -104,10 +107,38 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.isComplete = isComplete;
 
         hideResponsesGiverRecipient();
+        retrieveGiverRecipientPairsFromResponses();
         // unlike emailTeamNameTable, emailLastNameTable and emailTeamNameTable,
         // roster.*Table is populated using the CourseRoster data directly
         this.rosterTeamNameMembersTable = getTeamNameToEmailsTableFromRoster(roster);
         this.rosterSectionTeamNameTable = getSectionToTeamNamesFromRoster(roster);
+        this.rosterSectionStudentTable = getSectionStudentTableFromRoster(roster);
+    }
+    
+    
+    private void retrieveGiverRecipientPairsFromResponses() {
+        possibleRecipientsForGiver = new HashMap<String, Set<String>>();
+        possibleGiversForRecipient = new HashMap<String, Set<String>>();
+        
+        for (FeedbackResponseAttributes response : this.responses) {
+            if (possibleRecipientsForGiver.containsKey(response.giverEmail)) {
+                Set<String> recipientsForGiver = possibleRecipientsForGiver.get(response.giverEmail);
+                recipientsForGiver.add(response.recipientEmail);
+            } else {
+                Set<String> recipientsForGiver = new HashSet<>();
+                recipientsForGiver.add(response.recipientEmail);
+                possibleRecipientsForGiver.put(response.giverEmail, recipientsForGiver);
+            }
+            
+            if (possibleGiversForRecipient.containsKey(response.recipientEmail)) {
+                Set<String> giversForRecipient = possibleGiversForRecipient.get(response.recipientEmail);
+                giversForRecipient.add(response.giverEmail);
+            } else {
+                Set<String> giversForRecipient = new HashSet<>();
+                giversForRecipient.add(response.giverEmail);
+                possibleGiversForRecipient.put(response.recipientEmail, giversForRecipient);
+            }
+        }
     }
 
     /**
@@ -1198,7 +1229,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
      * Returns responses as a map of {@code feedbackQuestionAttributes.getId()}, to giverIdentifier, to recipientIdentifier
      * i.e. A response can be obtained by traversing the map in the order of feedbackQuestion > giverEmail > recipientEmail 
      */
-    public Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> getQuestionResponseMapByQuestionGiverRecipient() {
+    public Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> getResponseBundle() {
         Map<String, Map<String, Map<String, FeedbackResponseAttributes > > > result = new LinkedHashMap<String, Map<String, Map<String, FeedbackResponseAttributes>>>();
         
         for (FeedbackResponseAttributes response : responses) {
@@ -1242,6 +1273,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     }
     
     
+
     /**
      * Returns responses as a Map<recipientName, Map<question, List<response>>>
      * Where the responses are sorted in the order of recipient, question, giver.
@@ -1380,66 +1412,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return sortedMap;
     }
 
-    /**
-     * Returns responses as a Map<giverName, Map<question, List<response>>>
-     * Where the responses are sorted in the order of giver, question, recipient.
-     * @param sortByTeam
-     * @return responses sorted by Giver > Question > Recipient
-     */
-    public Map<String, Map<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>>>
-            getResponsesSortedByGiverQuestionRecipient(boolean sortByTeam) {
-        Map<String, Map<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>>> sortedMap =
-                new LinkedHashMap<String, Map<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>>>();
-        Map<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>> responsesFromOneGiver = null;
-        List<FeedbackResponseAttributes> responsesFromOneGiverOneQuestion = null;
-
-        if (sortByTeam) {
-            Collections.sort(responses, compareByTeamGiverQuestionTeamRecipient);
-        } else {
-            Collections.sort(responses, compareByGiverQuestionTeamRecipient);
-        }
-
-        String giver = null;
-        String questionId = null;
-        String giverName = null;
-
-        for (FeedbackResponseAttributes response : responses) {
-            if (giver == null || !response.giverEmail.equals(giver)) {
-                if (questionId != null && responsesFromOneGiverOneQuestion != null
-                 && responsesFromOneGiver != null) {
-                    responsesFromOneGiver.put(questions.get(questionId),
-                                              responsesFromOneGiverOneQuestion);
-                }
-                if (giver != null && responsesFromOneGiver != null) {
-                    sortedMap.put(giverName, responsesFromOneGiver);
-                }
-                responsesFromOneGiver = new LinkedHashMap<FeedbackQuestionAttributes, List<FeedbackResponseAttributes>>();
-                giver = response.giverEmail;
-                giverName = this.getGiverNameForResponse(questions.get(response.feedbackQuestionId),
-                                                         response);
-                questionId = null;
-            }
-            if (questionId == null || !response.feedbackQuestionId.equals(questionId)) {
-                if (questionId != null && responsesFromOneGiverOneQuestion != null) {
-                    responsesFromOneGiver.put(questions.get(questionId),
-                                              responsesFromOneGiverOneQuestion);
-                }
-                responsesFromOneGiverOneQuestion = new ArrayList<FeedbackResponseAttributes>();
-                questionId = response.feedbackQuestionId;
-            }
-            responsesFromOneGiverOneQuestion.add(response);
-        }
-        if (questionId != null && responsesFromOneGiverOneQuestion != null
-         && responsesFromOneGiver != null) {
-            responsesFromOneGiver.put(questions.get(questionId),
-                                      responsesFromOneGiverOneQuestion);
-        }
-        if (giver != null && responsesFromOneGiver != null) {
-            sortedMap.put(giverName, responsesFromOneGiver);
-        }
-
-        return sortedMap;
-    }
+   
     
     /**
      * Returns the responses in this bundle as a {@code Tree} structure with no base node using a {@code LinkedHashMap} implementation.
@@ -1584,9 +1557,38 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
 
         return sectionToTeam;
     }
+    
+    private Map<String, Set<String>> getSectionStudentTableFromRoster(CourseRoster courseroster) {
+        List<StudentAttributes> students = courseroster.getStudents();
+        Map<String, Set<String>> sectionNameToEmails = new HashMap<String, Set<String>>();
+
+        for (StudentAttributes student : students) {
+            String studentSection = student.section;
+            Set<String> studentEmails;
+
+            if (sectionNameToEmails.containsKey(studentSection)) {
+                studentEmails = sectionNameToEmails.get(studentSection);
+            } else {
+                studentEmails = new HashSet<String>();
+            }
+
+            studentEmails.add(student.email);
+            sectionNameToEmails.put(studentSection, studentEmails);
+        }
+
+        List<InstructorAttributes> instructors = courseroster.getInstructors();
+        String instructorsSection = Const.DEFAULT_SECTION;
+        Set<String> instructorEmails = new HashSet<String>();
+
+        for (InstructorAttributes instructor : instructors) {
+            instructorEmails.add(instructor.email);
+            sectionNameToEmails.put(instructorsSection, instructorEmails);
+        }
+
+        return sectionNameToEmails;
+    } 
 
     @SuppressWarnings("unused")
-    // TODO unused. Can remove?
     private void ________________COMPARATORS_____________() {
     }
 
