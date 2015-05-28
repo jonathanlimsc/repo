@@ -193,11 +193,30 @@
                             
                 
                 for (String section : sectionsInCourse) {
-                    giverIndex++;
+                    sectionIndex++;
 
                     // Display header of section
             %>
-                    
+                    <div class="panel panel-success">
+                    <div class="panel-heading">
+                        <div class="row">
+                            <div class="col-sm-9 panel-heading-text">
+                                <strong><%=section.equals("None")? "Not in a section" : section%></strong>                        
+                            </div>
+                            <div class="col-sm-3">
+                                <div class="pull-right">
+                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
+                                        <%=shouldCollapsed ? "Expand " : "Collapse "%>
+                                        <%=groupByTeamEnabled == true ? "Teams" : "Students"%>
+                                    </a>
+                                    &nbsp;
+                                    <span class="glyphicon glyphicon-chevron-up"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-collapse collapse in">
+                    <div class="panel-body" id="sectionBody-<%=sectionIndex%>">
 
                 <%
 
@@ -240,12 +259,23 @@
                         
                         if (groupByTeamEnabled) {  // Display statistics for the whole team
                     %>
-                 
-                              
-                            
+                            <div class="panel panel-warning">
+                            <div class="panel-heading">
+                                <div class="inline panel-heading-text">
+                                    <strong><%=team%></strong>
+                                </div>
+                                <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
+                            </div>
+                            <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+                            <div class="panel-body background-color-warning">
+                                <div class="resultStatistics">
+                           
+
+                                <h3><%=team%> Statistics for Given Responses </h3>
+                                <hr class="margin-top-0">   
                     <%        
                     	if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
-                    		  // No responses from team
+                    		 
                         		  
                             
                             // Display statistics for teams
@@ -279,18 +309,43 @@
                                     }
                                 }
 %>
-                            
+                                
 <%
                             } else {
 %>
                                     <p class="text-color-gray"><i>No statistics available.</i></p>
 <%
-                                }
+                            }
                             
                         }  // end of team statistics
                         
+
+                                         
+%>
+
+
+                            <%
+                                if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
+                            %>
+                                <div class="row">
+                                    <div class="col-sm-9">
+                                        <h3><%=team%> Detailed Responses </h3>
+                                    </div>
+                                    <div class="col-sm-3 h3">
+                                        <a class="btn btn-warning btn-xs pull-right" id="collapse-panels-button-team-<%=teamIndex%>" data-toggle="tooltip" title="Collapse or expand all student panels. You can also click on the panel heading to toggle each one individually.">
+                                            <%=shouldCollapsed ? "Expand " : "Collapse "%> Students
+                                        </a>
+                                    </div>
+                                </div>
+                                <hr class="margin-top-0">
+                            <%
+                                }
+                            %>
+                            </div>
+                        <%
+
+
                         // Display detailed responses
-                        
                         
                         %>
                             
@@ -333,15 +388,22 @@
                 <% 
                 
                             } // end giver
-                %>
                 
+                
+                        if (groupByTeamEnabled) {
+                %>
+
+                            </div></div></div>
+                <%
+                        }
                        
                 
-                <%        
+                    
                  
                     } // end team
                 %>
-                
+          
+                </div></div></div>
         <%
                 } // end section
                 
