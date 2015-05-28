@@ -45,6 +45,11 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public Map<String, Set<String>> anonymousRecipientsInSection = null;
     public Map<String, Set<String>> anonymousGiversInSection = null;
     
+    // Used for computation of statistics in Giver > Question > Recipient View
+    public Map<String, Map<String, List<FeedbackResponseAttributes>>> mapOfQuestionResponsesForGiverTeam;
+    // TODO Used for computation of statistics in Recipient > Question > Giver View
+    public Map<String, Map<String, List<FeedbackResponseAttributes>>> mapOfQuestionResponsesForRecipientTeam;
+    
     public FeedbackSessionResponseStatus responseStatus = null;
     public CourseRoster roster = null;
     public Map<String, List<FeedbackResponseCommentAttributes>> responseComments = null;
@@ -115,7 +120,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.isComplete = isComplete;
 
         hideResponsesGiverRecipient();
-        constructTablesForPossibleGiversAndRecipientsFromResponses();
+        //constructTablesForPossibleGiversAndRecipientsFromResponses();
         // unlike emailTeamNameTable, emailLastNameTable and emailTeamNameTable,
         // roster.*Table is populated using the CourseRoster data directly
         this.rosterTeamNameMembersTable = getTeamNameToEmailsTableFromRoster(roster);
@@ -124,7 +129,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     }
     
     
-    private void constructTablesForPossibleGiversAndRecipientsFromResponses() {
+    public void constructTablesForPossibleGiversAndRecipientsFromResponses() {
         possibleRecipientsForGiver = new HashMap<String, Set<String>>();
         possibleGiversForRecipient = new HashMap<String, Set<String>>();
         
@@ -176,6 +181,34 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                 }
             }
         }
+    }
+    
+    public void constructMapOfQuestionResponsesForGiverTeam() {
+        mapOfQuestionResponsesForGiverTeam = new HashMap<String, Map<String, List<FeedbackResponseAttributes>>>();
+        
+        for (FeedbackResponseAttributes response : responses) {
+            String giver = response.giverEmail;
+            String giverTeam = getTeamNameForEmail(giver);
+            
+            if (mapOfQuestionResponsesForGiverTeam.containsKey(giverTeam)) {
+                Map<String, List<FeedbackResponseAttributes>> questionToResponseMap = mapOfQuestionResponsesForGiverTeam.get(giverTeam);
+                if (questionToResponseMap.containsKey(response.feedbackQuestionId)) {
+                    List<FeedbackResponseAttributes> responseList = questionToResponseMap.get(response.feedbackQuestionId);
+                    responseList.add(response);
+                } else {
+                    List<FeedbackResponseAttributes> responseList = new ArrayList<FeedbackResponseAttributes>();
+                    responseList.add(response);
+                    questionToResponseMap.put(response.feedbackQuestionId, responseList);
+                }
+            } else {
+                Map<String, List<FeedbackResponseAttributes>> questionToResponseMap = new HashMap<String, List<FeedbackResponseAttributes>>();
+                List<FeedbackResponseAttributes> responseSet = new ArrayList<FeedbackResponseAttributes>();
+                responseSet.add(response);
+                questionToResponseMap.put(response.feedbackQuestionId, responseSet);
+                mapOfQuestionResponsesForGiverTeam.put(giverTeam, questionToResponseMap);
+            }
+        }
+        
     }
 
     /**
@@ -1272,6 +1305,46 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return sortedMap;
     }
     
+    public boolean isQuestionForParticipantToGiveResponses(String questionId, String giverIdentifier) {
+        FeedbackQuestionAttributes question = questions.get(questionId);
+        switch (question.giverType) {
+            case INSTRUCTORS:
+                return isParticipantIdentifierInstructor(giverIdentifier);
+            case SELF:
+                return feedbackSession.creatorEmail.equals(giverIdentifier);
+            case STUDENTS:
+            case TEAMS:
+                return isParticipantIdentifierStudent(giverIdentifier);
+            default:
+                Assumption.fail("Incorrect giver type");
+                break;
+        }
+        return false;
+    }
+    
+    public boolean isQuestionForParticipantToReceiveResponses(String questionId, String recipientIdentifier) {
+        FeedbackQuestionAttributes question = questions.get(questionId);
+        switch (question.recipientType) {
+            case GIVER:
+                return isQuestionForParticipantToGiveResponses(questionId, recipientIdentifier);
+            case INSTRUCTORS:
+                return isParticipantIdentifierInstructor(recipientIdentifier);
+            case NONE:
+                return recipientIdentifier.equals(Const.GENERAL_QUESTION);
+            case OWN_TEAM:
+            case OWN_TEAM_MEMBERS:
+            case OWN_TEAM_MEMBERS_INCLUDING_SELF:
+            case RECEIVER_TEAM_MEMBERS:
+            case STUDENTS:
+            case TEAMS:
+                return isParticipantIdentifierStudent(recipientIdentifier);
+            default:
+                Assumption.fail("Incorrect recipient type");
+                break;
+        }
+        return false;
+    }
+    
     /**
      * Returns responses as a map of {@code feedbackQuestionAttributes.getId()}, to giverIdentifier, to recipientIdentifier
      * i.e. A response can be obtained by traversing the map in the order of feedbackQuestion > giverEmail > recipientEmail 
@@ -1305,7 +1378,12 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return result;
     }
     
-    public List<FeedbackResponseAttributes> filterResponsesForQuestion(Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle, String questionId) {
+    public List<FeedbackResponseAttributes> filterResponsesForQuestion(Map<String, 
+                                     Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle, 
+                                     String questionId) {
+        if (!responseBundle.containsKey(questionId)) {
+            return new ArrayList<FeedbackResponseAttributes>();
+        }
         Map<String, Map<String, FeedbackResponseAttributes>> responsesMapOfGiverAndRecipient = responseBundle.get(questionId);
         
         List<FeedbackResponseAttributes> responses = new ArrayList<FeedbackResponseAttributes>();
@@ -1318,6 +1396,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         
         return responses;
     }
+    
     
     
 
