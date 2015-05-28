@@ -145,15 +145,20 @@ public class InstructorFeedbackResultsPageAction extends Action {
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_QUESTION, data);
             case "recipient-giver-question":
+                data.bundle.constructTablesForPossibleGiversAndRecipientsFromResponses();
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_RECIPIENT_GIVER_QUESTION, data);
             case "giver-recipient-question":
+                data.bundle.constructTablesForPossibleGiversAndRecipientsFromResponses();
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_GIVER_RECIPIENT_QUESTION, data);
             case "recipient-question-giver":
+                data.bundle.constructTablesForPossibleGiversAndRecipientsFromResponses();
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_RECIPIENT_QUESTION_GIVER, data);
             case "giver-question-recipient":
+                data.bundle.constructTablesForPossibleGiversAndRecipientsFromResponses();
+                data.bundle.constructMapOfQuestionResponsesForGiverTeam();
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_GIVER_QUESTION_RECIPIENT, data);
             default:
