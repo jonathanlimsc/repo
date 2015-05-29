@@ -346,8 +346,13 @@
                             // display for giver
                             for (String giver : givers) {
                             	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
+
+                                boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
+
+                                String panelClass = isGiverWithResponses ? "panel-primary" : "panel-default";
+                                String buttonClass = isGiverWithResponses ? "btn-primary" : "btn-default";
                         %>
-                                <div class="panel panel-primary">
+                                <div class="panel <%= panelClass %>">
                                 <div class="panel-heading">
                                     From: 
                                     <%
@@ -380,7 +385,7 @@
                                     %>
                                             <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
                                             
-                                                <input type="submit" class="btn btn-primary btn-xs" value="Moderate Responses" <%= disabledAttribute %> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
+                                                <input type="submit" class="btn <%=buttonClass %> btn-xs" value="Moderate Responses" <%= disabledAttribute %> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
                                                 <input type="hidden" name="courseid" value="<%=data.courseId %>">
                                                 <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
                                                 <input type="hidden" name="moderatedstudent" value=<%= giver%>>
@@ -399,19 +404,39 @@
 
                                     <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
                                     <div class="panel-body">
-                            <%
+                                <%
+
+                                     if (!isGiverWithResponses) {
+                                        // display 'no responses' msg
+                                %>
+                                        <i>There are no responses given by this user</i>
+                                    </div> <!-- close giver tags -->
+                                    </div>
+                                    </div>
+                                <%
+                                        continue; // skip to the next giver
+                                    }
+                                %>
+                                <%
                                     // questions level
                                     int questionIndex = 0;
                                     for (String questionId : questionIds) {
                                         FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
                                         FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
+
+                                        if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver)) {
+                                            // no response for current (question, giver, *)
+                                            continue;   
+                                        }
+
                                         questionIndex += 1;
 
                                         // First, get all responses from the giver
                                         List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
 
-                                        if (!data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
-                                            break;      // Giver has no response
+                                        boolean isResponsesEmpty = !data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                                        if (isResponsesEmpty) {
+                                            break;      
                                         }
 
                                         List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
@@ -428,9 +453,10 @@
                             %>
                                         <div class="panel panel-info">
                                             <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                            <div class="panel-heading">Question <%=question.questionNumber%>: <span class="text-preserve-space"><%
-                                                    out.print(InstructorFeedbackResultsPageData.sanitizeForHtml(questionDetails.questionText));
-                                                    out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
+                                            <div class="panel-heading">Question <%=question.questionNumber%>: 
+                                                <span class="text-preserve-space"><%
+                                                        out.print(InstructorFeedbackResultsPageData.sanitizeForHtml(questionDetails.questionText));
+                                                        out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
                                             </div>
 
                                             <div class="panel-body padding-0">
@@ -463,7 +489,12 @@
                                                     </thead>
                                                     <tbody>
                                                 <%
-                                                        for (String recipient : recipients) {
+                                                        List<String> possibleReceivers = 
+                                                                question.giverType.isTeam() ? 
+                                                                data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
+                                                                data.bundle.getPossibleRecipients(question, giver);
+
+                                                        for (String recipient : possibleReceivers) {
                                                             FeedbackResponseAttributes feedbackResponse = null;
                                                             if (responseBundle.containsKey(questionId) 
                                                                 && responseBundle.get(questionId).containsKey(giver) 
@@ -476,7 +507,7 @@
                                                             String recipientName = data.bundle.getNameForEmail(recipient);
                                                             String recipientTeamName = data.bundle.getTeamNameForEmail(recipient);
 
-
+                                                            if (hasResponse || questionDetails.shouldShowNoResponseText(giver, recipient, question)) {
                                                 %>
                                                             <tr>
                                                             <%
@@ -512,17 +543,18 @@
                                                                     <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(feedbackResponse, question)%></td>
                                                             <%
                                                                 } else {
-                                                                    if (questionDetails.shouldShowNoResponseText(giver, recipient, question)) {
+
                                                             %>  
-                                                                        <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                        <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
+                                                                    <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                    <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
                                                             <%  
-                                                                    }
+                                                                    
                                                                 }
                                                             %>
                                                             </tr>
-                                                <%
-                                                        }
+                                                <%  
+                                                            } // end of should show no response text
+                                                        }   // end of recipient loop
                                                 %>
                                                     </tbody>
                                                 </table>
