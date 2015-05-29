@@ -134,21 +134,31 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         possibleGiversForRecipient = new HashMap<String, Set<String>>();
         
         for (FeedbackResponseAttributes response : this.responses) {
-            if (possibleRecipientsForGiver.containsKey(response.giverEmail)) {
-                Set<String> recipientsForGiver = possibleRecipientsForGiver.get(response.giverEmail);
+            FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
+            String giverIdentifier;
+            
+            // normalise the giver name i.e. ".*'s team" converted to actual team name
+            if (question.giverType.isTeam()) {
+                giverIdentifier = response.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                giverIdentifier = getTeamNameForEmail(giverIdentifier);
+            } else {
+                giverIdentifier = response.giverEmail;
+            }
+            if (possibleRecipientsForGiver.containsKey(giverIdentifier)) {
+                Set<String> recipientsForGiver = possibleRecipientsForGiver.get(giverIdentifier);
                 recipientsForGiver.add(response.recipientEmail);
             } else {
                 Set<String> recipientsForGiver = new HashSet<>();
                 recipientsForGiver.add(response.recipientEmail);
-                possibleRecipientsForGiver.put(response.giverEmail, recipientsForGiver);
+                possibleRecipientsForGiver.put(giverIdentifier, recipientsForGiver);
             }
             
             if (possibleGiversForRecipient.containsKey(response.recipientEmail)) {
                 Set<String> giversForRecipient = possibleGiversForRecipient.get(response.recipientEmail);
-                giversForRecipient.add(response.giverEmail);
+                giversForRecipient.add(giverIdentifier);
             } else {
                 Set<String> giversForRecipient = new HashSet<>();
-                giversForRecipient.add(response.giverEmail);
+                giversForRecipient.add(giverIdentifier);
                 possibleGiversForRecipient.put(response.recipientEmail, giversForRecipient);
             }
         }

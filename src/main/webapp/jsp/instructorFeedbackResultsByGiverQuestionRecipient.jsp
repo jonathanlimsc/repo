@@ -258,6 +258,11 @@
                                 givers.addAll(data.bundle.anonymousGiversInSection.get(anonymousGiver));
                             }
                         }
+
+                        // add team to possible givers (for questions where the giver is TEAM)
+                        if (data.bundle.possibleRecipientsForGiver.containsKey(team)) {
+                            givers.add(team);
+                        }
                         
                         if (groupByTeamEnabled) {  // Display statistics for the whole team
                     %>
