@@ -106,18 +106,17 @@
                 <div class="panel-collapse collapse <%= showAll && !shouldCollapsed ? "in" : "" %>">
                 <div class="panel-body padding-0" id="questionBody-<%=questionIndex%>">
                     <%
-                        if (!isQuestionWithResponse){
-                    %>
-                            <div class="col-sm-12">
-                                <i class="text-muted">There are no responses for this question.</i>
-                            </div>
-                    <%
-                        } else if (showAll) {  
+                        if (showAll) {  
                             // display responses
+                            if (isQuestionWithResponse) {
                     %>
                             <div class="resultStatistics">
                                 <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.filterResponsesForQuestion(responseBundle, question.getId()), question, data, data.bundle, "question")%>
                             </div>
+
+                        <%
+                            }
+                        %>
                             
                             <div class="table-responsive">
                                 <table class="table table-striped table-bordered dataTable margin-0">
@@ -150,8 +149,8 @@
                                 </thead>
                                 <tbody>
                             <%
-                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);
-                            
+
+                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);                        
                             for (String giver : possibleGivers) {
                                 List<String> possibleReceivers = question.giverType.isTeam() ? 
                                                                  data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
@@ -191,7 +190,8 @@
                                     }
 
                                     // obtain response from responseBundle
-                                    boolean isResponseExist = responseBundle.get(questionId).containsKey(giverDisplayableIdentifier) 
+                                    boolean isResponseExist = responseBundle.containsKey(questionId) 
+                                                              && responseBundle.get(questionId).containsKey(giverDisplayableIdentifier) 
                                                               && responseBundle.get(questionId).get(giverDisplayableIdentifier).
                                                                                            containsKey(recipientDisplayableIdentifier);
 

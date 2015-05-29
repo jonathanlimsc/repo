@@ -1353,9 +1353,18 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         
         for (FeedbackResponseAttributes response : responses) {
             String questionId = response.feedbackQuestionId;
-            String giverIdentifier = response.giverEmail;
-            String recipientIdentifier = response.recipientEmail;
+            String giverIdentifier;
             
+            FeedbackQuestionAttributes question = questions.get(questionId);
+            if (question.giverType.isTeam()) {
+                giverIdentifier = response.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                giverIdentifier = getTeamNameForEmail(giverIdentifier);
+            } else {
+                giverIdentifier = response.giverEmail;
+            }
+            
+            String recipientIdentifier = response.recipientEmail;
+
             Map<String, Map<String, FeedbackResponseAttributes > > giverToRecipientResponseMap;
             Map<String, FeedbackResponseAttributes > recipientToResponseMap; 
             giverToRecipientResponseMap = result.containsKey(questionId) ? 

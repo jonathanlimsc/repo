@@ -342,7 +342,8 @@
                             <div class="panel-body">
 
                         <%
-                            if (!data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
+                            boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                            if (!isGiverWithResponses) {
                                 // display 'no responses' msg
                                 %>
                                         <i>There are no responses given by this user</i>
@@ -862,7 +863,9 @@
                                                                 <textarea class="form-control" rows="3" placeholder="Your comment about this response" name="<%=Const.ParamsNames.FEEDBACK_RESPONSE_COMMENT_TEXT%>" id="responseCommentAddForm-<%=recipientIndex%>-<%=giverIndex%>-<%=qnIndx%>"></textarea>
                                                             </div>
                                                             <div class="col-sm-offset-5">
-                                                                <a href="<%=Const.ActionURIs.INSTRUCTOR_FEEDBACK_RESPONSE_COMMENT_ADD%>" type="button" class="btn btn-primary" id="button_save_comment_for_add-<%=recipientIndex%>-<%=giverIndex%>-<%=qnIndx%>">Add</a>
+                                                                <a href="<%=Const.ActionURIs.INSTRUCTOR_FEEDBACK_RESPONSE_COMMENT_ADD%>" 
+                                                                   type="button" class="btn btn-primary" 
+                                                                   id="button_save_comment_for_add-<%=recipientIndex%>-<%=giverIndex%>-<%=qnIndx%>">Add</a>
                                                                 <input type="button" class="btn btn-default" value="Cancel" onclick="hideResponseCommentAddForm(<%=recipientIndex%>,<%=giverIndex%>,<%=qnIndx%>)">
                                                                 <input type="hidden" name="<%=Const.ParamsNames.COURSE_ID %>" value="<%=singleResponse.courseId %>">
                                                                 <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_SESSION_NAME %>" value="<%=singleResponse.feedbackSessionName %>">
