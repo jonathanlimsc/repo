@@ -110,11 +110,20 @@
                             // display responses
                             if (isQuestionWithResponse) {
                     %>
-                            <div class="resultStatistics">
-                                <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.filterResponsesForQuestion(responseBundle, question.getId()), question, data, data.bundle, "question")%>
-                            </div>
-
+                                <div class="resultStatistics">
+                                    <%=questionDetails.getQuestionResultStatisticsHtml(data.bundle.filterResponsesForQuestion(responseBundle, question.getId()), question, data, data.bundle, "question")%>
+                                </div>
                         <%
+                            } else {
+                        %>    
+                                    <div class="col-sm-12">
+                                        <i class="text-muted">There are no responses for this question.</i>
+                                    </div>
+                                </div>
+                                </div>
+                                </div>
+                        <%
+                                continue; // skip to next question
                             }
                         %>
                             
@@ -150,12 +159,11 @@
                                 <tbody>
                             <%
 
-                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);                        
+                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);       
                             for (String giver : possibleGivers) {
                                 List<String> possibleReceivers = question.giverType.isTeam() ? 
                                                                  data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
                                                                  data.bundle.getPossibleRecipients(question, giver);
-
  
                                 for (String recipient : possibleReceivers) {
                                     //initialise parameters used for modifying appearance
@@ -164,10 +172,8 @@
 
                                     boolean isShowingMissingResponseRow = false; 
 
-                                    String giverName;
-                                    String giverTeamName;
-                                    String recipientName;
-                                    String recipientTeamName;
+                                    String giverName, giverTeamName;
+                                    String recipientName, recipientTeamName;
                                     Boolean isGiverVisible = data.bundle.isGiverVisibleToInstructor(question);
 
                                     String giverDisplayableIdentifier;
@@ -225,6 +231,7 @@
                                         } else {
                                             // skip to next recipient
                                             // since there is no need to display any row for this (questionId, giver, recipient)
+                                            // due to visibility options
                                             continue;
                                         }
                                     } else {
@@ -307,20 +314,14 @@
                             <%
                                     //end of displaying of 1 response
                                 }  // end of recipient loop
-
-
                             } // end of giver loop
                             %>
-
                             </tbody>
                         </table>
                     </div>
-                      
                     <%
                         } // end of display responses
-
                     %>
-                    
                 </div>
                 </div>
             </div>

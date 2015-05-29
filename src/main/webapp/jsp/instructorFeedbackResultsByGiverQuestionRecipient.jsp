@@ -243,7 +243,7 @@
 
                         // Prepare feedback givers in the current team
                         boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                               && data.bundle.emailTeamNameTable.containsKey(team);
+                                                  && team != Const.DEFAULT_SECTION;
 
                         if (groupByTeamEnabled && !isAnonymousTeam) {
                             givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
@@ -252,10 +252,17 @@
                             String giverName = team;
                             giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                             givers.add(giverName);
-                        } else { // TODO handle anonymous team
+                        } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
                             givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
+                            if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                                for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
+                                    givers.add(anonymousGiver);
+                                }
+                            }
+                        } else {
+                            givers = new ArrayList<String>();
                             for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
-                                givers.addAll(data.bundle.anonymousGiversInSection.get(anonymousGiver));
+                                givers.add(anonymousGiver);
                             }
                         }
 
@@ -328,7 +335,15 @@
                         <%
                                 }
                             
-                        }  // end of team statistics
+                        }   // end of team statistics
+                        else  {
+
+                        %>
+                            <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+
+                        <%
+                        }
+
                         %>
                         
                                 <div class="row">
@@ -417,7 +432,7 @@
                                         // display 'no responses' msg
                                 %>
                                         <i>There are no responses given by this user</i>
-                                    </div> <!-- close giver tags -->
+                                    </div> <!-- close giver tags TODO: dont do this like this -->
                                     </div>
                                     </div>
                                 <%
@@ -462,7 +477,6 @@
                                             <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
                                             <div class="panel-heading">Question <%=question.questionNumber%>: 
                                                 <span class="text-preserve-space"><%
-                                                        out.print(InstructorFeedbackResultsPageData.sanitizeForHtml(questionDetails.questionText));
                                                         out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
                                             </div>
 
@@ -555,7 +569,6 @@
                                                                     <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
                                                     <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
                                                             <%  
-                                                                    
                                                                 }
                                                             %>
                                                             </tr>
@@ -567,43 +580,31 @@
                                                 </table>
                                             </div>
                                         </div>   
-
-
                             <%
                                     } // End question
                             %> 
-
                                 </div>
                                 </div></div>
                 <% 
                             } // end giver
-                
-                
-                        if (groupByTeamEnabled) {
+                            if (groupByTeamEnabled) {
                 %>
-
-                            </div></div></div>
+                                </div></div></div>
                 <%
-                        }
-                       
-                                
+                            }
+                            
                     } // end team
                 %>
-          
                 </div></div></div>
         <%
                 } // end section
-                
         %>
         <%
-                
             } /// show all
         %>
-
         <jsp:include page="<%=Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BOTTOM%>" />
         </div>
     </div>
-
     <jsp:include page="<%=Const.ViewURIs.FOOTER%>" />
 </body>
 </html>
