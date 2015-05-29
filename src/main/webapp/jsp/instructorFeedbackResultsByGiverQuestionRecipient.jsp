@@ -190,6 +190,8 @@
                             
                 Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();
                 Set<String> givingSections = new HashSet<String>();
+
+                List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
                             
                 
                 for (String section : sectionsInCourse) {
@@ -274,21 +276,25 @@
                                 <h3><%=team%> Statistics for Given Responses </h3>
                                 <hr class="margin-top-0">   
                     <%        
-                    	if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
-                    		 
-                        		  
-                            
-                            // Display statistics for teams
+                            	if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
+                                    // Display statistics for team
                     %>
                            
                             <%
                                 // By Question
                                 int questionIndex = -1;
-                                List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
+
                                 for (String questionId : questionIds)  {
+                                    if (!data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).containsKey(questionId)) {
+                                        continue;
+                                    }
+
                                     FeedbackQuestionAttributes question = questions.get(questionId);
                                     FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
-                                    String statsHtml = questionDetails.getQuestionResultStatisticsHtml(data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).get(questionId), question, data, data.bundle, "giver-question-recipient");
+                                    String statsHtml = questionDetails.getQuestionResultStatisticsHtml(
+                                                                            data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).
+                                                                            get(questionId), question, data, data.bundle, "giver-question-recipient");
+
 
                                     if (statsHtml != "") {
                             %>
@@ -305,27 +311,27 @@
                                                 </div>
                                             </div>
                                         </div>
-<%
+                            <%
                                     }
                                 }
-%>
+                            %>
                                 
-<%
-                            } else {
-%>
+                        <%
+                                } else {
+                        %>
                                     <p class="text-color-gray"><i>No statistics available.</i></p>
-<%
-                            }
+                        <%
+                                }
                             
                         }  // end of team statistics
                         
 
                                          
-%>
+                        %>
 
 
                             <%
-                                if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
+                               // if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
                             %>
                                 <div class="row">
                                     <div class="col-sm-9">
@@ -339,7 +345,7 @@
                                 </div>
                                 <hr class="margin-top-0">
                             <%
-                                }
+                                //}
                             %>
                             </div>
                         <%
@@ -356,8 +362,8 @@
                             for (String giver : givers) {
                             	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
                         %>
-                                
-                                
+                                <div class="panel panel-primary">
+                                <div class="panel-heading">
                                     From: 
                                     <%
                                         if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, giver).isEmpty()) {
@@ -376,17 +382,85 @@
                                         </div>
                                     <%
                                         }
-                                        
+                                        // Moderations button    
                                     %>
-                                    
-                <%
-                                // recipient level
-                
-                
-                %>     
-                             
+
+                                    <div class="pull-right">
+                                    <% 
+                                        boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(giver), 
+                                                                                                         data.feedbackSessionName, 
+                                                                                                         Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
+                                        String disabledAttribute = !isAllowedToModerate? "disabled=\"disabled\"" : "";
+                                        if (data.bundle.isParticipantIdentifierStudent(giver)) { 
+                                    %>
+                                            <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
+                                            
+                                                <input type="submit" class="btn btn-primary btn-xs" value="Moderate Responses" <%= disabledAttribute %> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
+                                                <input type="hidden" name="courseid" value="<%=data.courseId %>">
+                                                <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
+                                                <input type="hidden" name="moderatedstudent" value=<%= giver%>>
+                                            
+                                            </form>
+                                    <% 
+                                        } // End of Moderations button
+                                        // Close giver's header
+                                    %>
+                                        &nbsp;
+                                        <div class="display-icon" style="display:inline;">
+                                            <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
+                                        </div>                
+                                    </div>
+                                </div>
+
+                                    <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+                                    <div class="panel-body">
+
+
+
+                            <%
+                                    // questions level
+                                    int questionIndex = 0;
+                                    for (String questionId : questionIds) {
+                                        FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
+                                        FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
+                                        questionIndex += 1;
+
+                                        // First, get all responses from the giver
+                                        List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
+
+                                        if (!data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
+                                            break;      // Giver has no response
+                                        }
+
+                                        List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
+                                        for (String recipient : recipients) {
+                                            responsesFromGiver.add(responseBundle.get(questionId).get(giver).get(recipient));
+                                        }
+
+                            %>
+                                        <div class="panel panel-info">
+                                            <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                            <div class="panel-heading">Question <%=question.questionNumber%>: <span class="text-preserve-space"><%
+                                                    out.print(InstructorFeedbackResultsPageData.sanitizeForHtml(questionDetails.questionText));
+                                                    out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
+                                            </div>
+
+                                <%
+
+
+
+
+                                %>
+                                        </div>   
+
+
+                            <%
+                                    } // End question
+                            %> 
+
+                                </div>
+                                </div></div>
                 <% 
-                
                             } // end giver
                 
                 
