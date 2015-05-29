@@ -39,8 +39,10 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     
     public Map<String, boolean[]> visibilityTable = null;
     
-    public Map<String, Set<String>> possibleRecipientsForGiver = null;
-    public Map<String, Set<String>> possibleGiversForRecipient = null;
+    // Recipients of existing responses by the specified giver
+    public Map<String, Set<String>> existingRecipientsForGiver = null;
+    // Givers of existing responses received the specified recipient
+    public Map<String, Set<String>> existingGiversForRecipient = null;
     
     public Map<String, Set<String>> anonymousRecipientsInSection = null;
     public Map<String, Set<String>> anonymousGiversInSection = null;
@@ -120,7 +122,6 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.isComplete = isComplete;
 
         hideResponsesGiverRecipient();
-        //constructTablesForPossibleGiversAndRecipientsFromResponses();
         // unlike emailTeamNameTable, emailLastNameTable and emailTeamNameTable,
         // roster.*Table is populated using the CourseRoster data directly
         this.rosterTeamNameMembersTable = getTeamNameToEmailsTableFromRoster(roster);
@@ -130,8 +131,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     
     
     public void constructTablesForPossibleGiversAndRecipientsFromResponses() {
-        possibleRecipientsForGiver = new HashMap<String, Set<String>>();
-        possibleGiversForRecipient = new HashMap<String, Set<String>>();
+        existingRecipientsForGiver = new HashMap<String, Set<String>>();
+        existingGiversForRecipient = new HashMap<String, Set<String>>();
         
         for (FeedbackResponseAttributes response : this.responses) {
             FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
@@ -144,22 +145,22 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
             } else {
                 giverIdentifier = response.giverEmail;
             }
-            if (possibleRecipientsForGiver.containsKey(giverIdentifier)) {
-                Set<String> recipientsForGiver = possibleRecipientsForGiver.get(giverIdentifier);
+            if (existingRecipientsForGiver.containsKey(giverIdentifier)) {
+                Set<String> recipientsForGiver = existingRecipientsForGiver.get(giverIdentifier);
                 recipientsForGiver.add(response.recipientEmail);
             } else {
                 Set<String> recipientsForGiver = new HashSet<>();
                 recipientsForGiver.add(response.recipientEmail);
-                possibleRecipientsForGiver.put(giverIdentifier, recipientsForGiver);
+                existingRecipientsForGiver.put(giverIdentifier, recipientsForGiver);
             }
             
-            if (possibleGiversForRecipient.containsKey(response.recipientEmail)) {
-                Set<String> giversForRecipient = possibleGiversForRecipient.get(response.recipientEmail);
+            if (existingGiversForRecipient.containsKey(response.recipientEmail)) {
+                Set<String> giversForRecipient = existingGiversForRecipient.get(response.recipientEmail);
                 giversForRecipient.add(giverIdentifier);
             } else {
                 Set<String> giversForRecipient = new HashSet<>();
                 giversForRecipient.add(giverIdentifier);
-                possibleGiversForRecipient.put(response.recipientEmail, giversForRecipient);
+                existingGiversForRecipient.put(response.recipientEmail, giversForRecipient);
             }
         }
         
@@ -167,7 +168,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         anonymousRecipientsInSection = new HashMap<String, Set<String>>();
         
         for (FeedbackResponseAttributes response : this.responses) {
-            if (!isGiverVisible(response)) {
+            if (!isResponseGiverVisible(response)) {
                 String sectionName = response.giverSection;
                 if (anonymousGiversInSection.containsKey(sectionName)) {
                     Set<String> anonymousGivers = anonymousGiversInSection.get(sectionName);
@@ -179,7 +180,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                 }
             }
             
-            if (!isRecipientVisible(response)) {
+            if (!isResponseRecipientVisible(response)) {
                 String sectionName = response.recipientSection;
                 if (anonymousRecipientsInSection.containsKey(sectionName)) {
                     Set<String> anonymousRecipients = anonymousRecipientsInSection.get(sectionName);
@@ -233,7 +234,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
             FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
             FeedbackParticipantType participantType = question.recipientType;
 
-            if (!isRecipientVisible(response)) {
+            if (!isResponseRecipientVisible(response)) {
                 String anonEmail = getAnonEmail(participantType, name);
                 name = getAnonName(participantType, name);
 
@@ -247,7 +248,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
             name = emailNameTable.get(response.giverEmail);
             participantType = question.giverType;
 
-            if (!isGiverVisible(response)) {
+            if (!isResponseGiverVisible(response)) {
                 String anonEmail = getAnonEmail(participantType, name);
                 name = getAnonName(participantType, name);
 
@@ -264,7 +265,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     /**
      * Checks if the giver/recipient for a response is visible/hidden from the current user.
      */
-    public boolean isFeedbackParticipantVisible(boolean isGiver, FeedbackResponseAttributes response) {
+    public boolean isResponseFeedbackParticipantVisible(boolean isGiver, FeedbackResponseAttributes response) {
         FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
         FeedbackParticipantType participantType;
         String responseId = response.getId();
@@ -287,34 +288,31 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
      * Returns true if the recipient from a response is visible to the current user.
      * Returns false otherwise.
      */
-    public boolean isRecipientVisible(FeedbackResponseAttributes response) {
-        return isFeedbackParticipantVisible(false, response);
+    public boolean isResponseRecipientVisible(FeedbackResponseAttributes response) {
+        return isResponseFeedbackParticipantVisible(false, response);
     }
 
     /**
      * Returns true if the giver from a response is visible to the current user.
      * Returns false otherwise.
      */
-    public boolean isGiverVisible(FeedbackResponseAttributes response) {
-        return isFeedbackParticipantVisible(true, response);
+    public boolean isResponseGiverVisible(FeedbackResponseAttributes response) {
+        return isResponseFeedbackParticipantVisible(true, response);
     }
     
     /**
      * Checks giver and recipient for the questions are both visible to the instructor
      */
     public boolean isBothGiverAndReceiverVisibleToInstructor(FeedbackQuestionAttributes question) {
-
-        return question.showGiverNameTo.contains(FeedbackParticipantType.INSTRUCTORS) 
-            && question.showRecipientNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
+        return isGiverVisibleToInstructor(question) 
+            && isRecipientVisibleToInstructor(question);
     }
     
     public boolean isGiverVisibleToInstructor(FeedbackQuestionAttributes question) {
-
         return question.showGiverNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
     }
     
     public boolean isRecipientVisibleToInstructor(FeedbackQuestionAttributes question) {
-
         return question.showRecipientNameTo.contains(FeedbackParticipantType.INSTRUCTORS);
     }
 
@@ -1053,7 +1051,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public String getDisplayableEmail(boolean isGiver, FeedbackResponseAttributes response) {
         String participantIdentifier = isGiver? response.giverEmail : response.recipientEmail;
 
-        if (isEmailOfPerson(participantIdentifier) && isFeedbackParticipantVisible(isGiver, response)) {
+        if (isEmailOfPerson(participantIdentifier) && isResponseFeedbackParticipantVisible(isGiver, response)) {
             return participantIdentifier;
         } else {
             return Const.USER_NOBODY_TEXT;

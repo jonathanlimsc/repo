@@ -251,7 +251,7 @@
                             }
 
                             // add team to possible givers (for questions where the giver is TEAM)
-                            if (data.bundle.possibleRecipientsForGiver.containsKey(team)) {
+                            if (data.bundle.existingRecipientsForGiver.containsKey(team)) {
                                 givers.add(team);
                             }
                             
@@ -316,6 +316,17 @@
                                     } else {
                             %>
                                         <p class="text-color-gray"><i>No statistics available.</i></p>
+                                        <div class="row">
+                                        <div class="col-sm-9">
+                                            <h3><%=team%> Detailed Responses </h3>
+                                        </div>
+                                        <div class="col-sm-3 h3">
+                                            <a class="btn btn-warning btn-xs pull-right" id="collapse-panels-button-team-<%=teamIndex%>" data-toggle="tooltip" title="Collapse or expand all student panels. You can also click on the panel heading to toggle each one individually.">
+                                                <%=shouldCollapsed ? "Expand " : "Collapse "%> Students
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <hr class="margin-top-0">
                             <%
                                     }
                                 
@@ -328,17 +339,7 @@
                         <%
                             }
                         %>
-                                    <div class="row">
-                                        <div class="col-sm-9">
-                                            <h3><%=team%> Detailed Responses </h3>
-                                        </div>
-                                        <div class="col-sm-3 h3">
-                                            <a class="btn btn-warning btn-xs pull-right" id="collapse-panels-button-team-<%=teamIndex%>" data-toggle="tooltip" title="Collapse or expand all student panels. You can also click on the panel heading to toggle each one individually.">
-                                                <%=shouldCollapsed ? "Expand " : "Collapse "%> Students
-                                            </a>
-                                        </div>
-                                    </div>
-                                    <hr class="margin-top-0">
+                                    
                                 </div>
                             <% 
                                 Collections.sort(givers);
@@ -348,7 +349,7 @@
                                     giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
                                 	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
 
-                                    boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                                    boolean isGiverWithResponses = data.bundle.existingRecipientsForGiver.containsKey(giver);
 
                                     String panelClass = isGiverWithResponses ? "panel-primary" : "panel-default";
                                     String buttonClass = isGiverWithResponses ? "btn-primary" : "btn-default";
@@ -434,12 +435,12 @@
                                             // Get all responses from the giver
                                             List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
 
-                                            boolean isResponsesEmpty = !data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                                            boolean isResponsesEmpty = !data.bundle.existingRecipientsForGiver.containsKey(giver);
                                             if (isResponsesEmpty) {
-                                                break;      
+                                                break;
                                             }
 
-                                            List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
+                                            List<String> recipients = new ArrayList<String>(data.bundle.existingRecipientsForGiver.get(giver));
                                             for (String recipient : recipients) {
                                                 boolean isExistingResponse = responseBundle.containsKey(questionId) 
                                                                             && responseBundle.get(questionId).containsKey(giver) 

@@ -262,7 +262,7 @@
                                 }
                             }
                             // add team to possible givers (for questions where the giver is TEAM)
-                            if (data.bundle.possibleRecipientsForGiver.containsKey(team)) {
+                            if (data.bundle.existingRecipientsForGiver.containsKey(team)) {
                                 givers.add(team);
                             }
                             
@@ -346,7 +346,7 @@
                                 <div class="panel-body">
 
                         <%
-                                boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                                boolean isGiverWithResponses = data.bundle.existingRecipientsForGiver.containsKey(giver);
                                 if (!isGiverWithResponses) {
                                     // display 'no responses' msg
                                     %>
@@ -357,12 +357,12 @@
                                     <%
                                     continue; // skip to the next giver
 
-                                } else if (data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
-                                    List<String> possibleRecipientsForGiver = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
+                                } else if (data.bundle.existingRecipientsForGiver.containsKey(giver)) {
+                                    List<String> existingRecipientsForGiver = new ArrayList<String>(data.bundle.existingRecipientsForGiver.get(giver));
                                     
-                                    Collections.sort(possibleRecipientsForGiver);
+                                    Collections.sort(existingRecipientsForGiver);
                                     int recipientIndex = 1;
-                                    for (String recipient : possibleRecipientsForGiver) {
+                                    for (String recipient : existingRecipientsForGiver) {
                                         String recipientIdentifier = data.bundle.getNameFromEmail(recipient);
 
                         %>

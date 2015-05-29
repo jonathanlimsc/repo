@@ -782,7 +782,7 @@ public class FeedbackSessionsLogic {
         for (FeedbackResponseAttributes response : allResponses) {
 
             // do not show all possible givers and recipients if there are anonymous givers and recipients 
-            if (!fsrBundle.isRecipientVisible(response) || !fsrBundle.isGiverVisible(response)) {
+            if (!fsrBundle.isResponseRecipientVisible(response) || !fsrBundle.isResponseGiverVisible(response)) {
                 possibleGiversWithoutResponses.clear();
                 possibleRecipientsForGiver.clear();
             }
