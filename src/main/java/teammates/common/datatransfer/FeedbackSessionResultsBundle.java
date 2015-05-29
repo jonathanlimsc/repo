@@ -1003,6 +1003,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         return actualResponse;
     }
 
+    //TODO rename this!
     public String getNameForEmail(String email) {
         String name = emailNameTable.get(email);
         if (name == null || name.equals(Const.USER_IS_TEAM)) {
@@ -1114,21 +1115,19 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         }
     }
     
-    public String getNameWithTeamName(String participantIdentifier) {
+    public String getNameFromEmail(String participantIdentifier) {
         String name;
-        String teamName;
         // If participantIdentifier has given a response before,
         if (emailNameTable.containsKey(participantIdentifier)) {
-            name = emailNameTable.get(participantIdentifier);
-            // obtain the team name from emailTeamNameTable, which is built using the responses
-            teamName = emailTeamNameTable.get(participantIdentifier);
+         // obtain the name from emailTeamNameTable, which is built using the responses
+            name = getNameForEmail(participantIdentifier);
+            
         } else {
-            name = getNameFromRoster(participantIdentifier, true);
             // otherwise use the roster data
-            teamName = getTeamNameFromRoster(participantIdentifier);
+            name = getNameFromRoster(participantIdentifier, true);
         }
         
-        return appendTeamNameToName(name, teamName);
+        return name;
     }
 
     public String appendTeamNameToName(String name, String teamName) {

@@ -74,41 +74,41 @@
                         for (String section: data.sections) {
             %>
                             <div class="panel panel-success">
-                                    <div class="panel-heading ajax_submit">
-                                        <div class="row">
-                                            <div class="col-sm-9 panel-heading-text">
-                                                <strong><%=section%></strong>
-                                            </div>
-                                            <div class="col-sm-3">
-                                                <div class="pull-right">
-                                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
-                                                        Expand
-                                                        <%= groupByTeamEnabled == true ? " Teams" : " Students" %>
-                                                    </a>
-                                                    &nbsp;
-                                                    <div class="display-icon" style="display:inline;">
-                                                        <span class="glyphicon glyphicon-chevron-down"></span>
-                                                    </div>
+                                <div class="panel-heading ajax_submit">
+                                    <div class="row">
+                                        <div class="col-sm-9 panel-heading-text">
+                                            <strong><%=section%></strong>
+                                        </div>
+                                        <div class="col-sm-3">
+                                            <div class="pull-right">
+                                                <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
+                                                    Expand
+                                                    <%= groupByTeamEnabled == true ? " Teams" : " Students" %>
+                                                </a>
+                                                &nbsp;
+                                                <div class="display-icon" style="display:inline;">
+                                                    <span class="glyphicon glyphicon-chevron-down"></span>
                                                 </div>
-                                             </div>
-                                        </div>
+                                            </div>
+                                         </div>
+                                    </div>
 
-                                        <form style="display:none;" id="seeMore-<%=sectionIndex%>" class="seeMoreForm-<%=sectionIndex%>" action="<%=Const.ActionURIs.INSTRUCTOR_FEEDBACK_RESULTS_PAGE%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.COURSE_ID%>" value="<%=data.bundle.feedbackSession.courseId%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_SESSION_NAME%>" value="<%=data.bundle.feedbackSession.feedbackSessionName%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_GROUPBYSECTION%>" value="<%=section%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.USER_ID%>" value="<%=data.account.googleId%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_GROUPBYTEAM%>" value="<%=data.groupByTeam%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE%>" value="<%=data.sortType%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_SHOWSTATS%>" value="on" id="showStats-<%=sectionIndex%>">
-                                            <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_MAIN_INDEX%>" value="on" id="mainIndex-<%=sectionIndex%>">
-                                        </form>
+                                    <form style="display:none;" id="seeMore-<%=sectionIndex%>" class="seeMoreForm-<%=sectionIndex%>" action="<%=Const.ActionURIs.INSTRUCTOR_FEEDBACK_RESULTS_PAGE%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.COURSE_ID%>" value="<%=data.bundle.feedbackSession.courseId%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_SESSION_NAME%>" value="<%=data.bundle.feedbackSession.feedbackSessionName%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_GROUPBYSECTION%>" value="<%=section%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.USER_ID%>" value="<%=data.account.googleId%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_GROUPBYTEAM%>" value="<%=data.groupByTeam%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_SORTTYPE%>" value="<%=data.sortType%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_SHOWSTATS%>" value="on" id="showStats-<%=sectionIndex%>">
+                                        <input type="hidden" name="<%=Const.ParamsNames.FEEDBACK_RESULTS_MAIN_INDEX%>" value="on" id="mainIndex-<%=sectionIndex%>">
+                                    </form>
+                                </div>
+                                <div class="panel-collapse collapse">
+                                    <div class="panel-body">
+                                    
                                     </div>
-                                    <div class="panel-collapse collapse">
-                                        <div class="panel-body">
-                                        
-                                        </div>
-                                    </div>
+                                </div>
                             </div>
                     <%
             	           sectionIndex++;
@@ -243,17 +243,19 @@
                         List<String> givers;
 
                         // Prepare feedback givers in the current team
-                        boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                               && data.bundle.emailTeamNameTable.containsKey(team);
+                        boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team);
 
                         if (groupByTeamEnabled && !isAnonymousTeam) {
                             givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
                         } else if (groupByTeamEnabled && isAnonymousTeam) {
                             givers = new ArrayList<String>();
                             String giverName = team;
+                            out.println(giverName);
                             giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                            giverName.trim();
+                            out.println(giverName);
                             givers.add(giverName);
-                        } else {
+                        } else { //TODO: check anonymous team
                             givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
                             for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                             	givers.addAll(data.bundle.anonymousGiversInSection.get(anonymousGiver));
@@ -287,7 +289,7 @@
                         Collections.sort(givers);
                         for (String giver : givers) {
                             String giverIdentifier = giver.replace(Const.TEAM_OF_EMAIL_OWNER, "");
-                            giverIdentifier = data.bundle.getNameWithTeamName(giverIdentifier);
+                            giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
                             String mailtoStyleAttr = (giverIdentifier.contains("@@"))?"style=\"display:none;\"":"";
 
                             // Display header of giver
@@ -302,15 +304,15 @@
                                         <div class="middlealign profile-pic-icon-hover inline panel-heading-text" data-link="<%=data.getProfilePictureLink(giverIdentifier)%>">
                                             <strong><%=giverIdentifier%></strong>
                                             <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
-                                            <a class="link-in-dark-bg" href="mailTo:<%=giverIdentifier%> " <%=mailtoStyleAttr%>>[<%=giverIdentifier%>]</a>
+                                            <a class="link-in-dark-bg" href="mailTo:<%=giverIdentifier%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
                                         </div>
                                 <%
                                     } else {
                                 %>
-                                    <div class="inline panel-heading-text">
-                                        <strong><%=giverIdentifier%></strong>
-                                        <a class="link-in-dark-bg" href="mailTo:<%=giverIdentifier%> " <%=mailtoStyleAttr%>>[<%=giverIdentifier%>]</a>
-                                    </div>
+                                        <div class="inline panel-heading-text">
+                                            <strong><%=giverIdentifier%></strong>
+                                            <a class="link-in-dark-bg" href="mailTo:<%=giverIdentifier%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
+                                        </div>
                                 <%
                                     }
                                     
@@ -335,18 +337,28 @@
                                         <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
                                     </div>                
                                 </div>
-                           </div>
+                            </div>
                             <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
                             <div class="panel-body">
 
                         <%
-                            if (data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
+                            if (!data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
+                                // display 'no responses' msg
+                                %>
+                                        <i>There are no responses given by this user</i>
+                                    </div> <!-- close giver tags -->
+                                    </div>
+                                    </div>
+                                <%
+                                continue; // skip to the next giver
+
+                            } else if (data.bundle.possibleRecipientsForGiver.containsKey(giver)) {
                                 List<String> possibleRecipientsForGiver = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
                                 
                                 Collections.sort(possibleRecipientsForGiver);
                                 int recipientIndex = 1;
                                 for (String recipient : possibleRecipientsForGiver) {
-                                    String recipientIdentifier = data.bundle.getNameWithTeamName(recipient);
+                                    String recipientIdentifier = data.bundle.getNameFromEmail(recipient);
 
                         %>
                                     <div class="row <%=recipientIndex == 1? "": "border-top-gray"%>">
@@ -393,7 +405,7 @@
                                             String questionId = questionEntry.getKey();
                                             FeedbackQuestionAttributes question = questionEntry.getValue();
 
-                                            if (!responseBundle.get(questionId).containsKey(giver) || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                            if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
                                                 // no response for current (question, giver, recipient)
                                                 continue;   
                                             }

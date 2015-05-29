@@ -342,9 +342,11 @@
                             %>
                             </div>
                         <% 
-                        
+                            Collections.sort(givers);
                             // display for giver
                             for (String giver : givers) {
+                                String giverIdentifier = giver.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                                giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
                             	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
 
                                 boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
@@ -359,7 +361,7 @@
                                         if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, giver).isEmpty()) {
                                     %>
                                             <div class="middlealign profile-pic-icon-hover inline panel-heading-text" data-link="<%=data.getProfilePictureLink(giver)%>">
-                                                <strong><%=giver%></strong>
+                                                <strong><%=giverIdentifier%></strong>
                                                 <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
                                                 <a class="link-in-dark-bg" href="mailTo:<%=giver%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
                                             </div>
@@ -367,7 +369,7 @@
                                         } else {
                                     %>
                                         <div class="inline panel-heading-text">
-                                            <strong><%=giver%></strong>
+                                            <strong><%=giverIdentifier%></strong>
                                             <a class="link-in-dark-bg" href="mailTo:<%=giver%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
                                         </div>
                                     <%
