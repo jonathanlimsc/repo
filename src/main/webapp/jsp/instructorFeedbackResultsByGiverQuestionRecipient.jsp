@@ -324,15 +324,8 @@
                                 }
                             
                         }  // end of team statistics
-                        
-
-                                         
                         %>
-
-
-                            <%
-                               // if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
-                            %>
+                        
                                 <div class="row">
                                     <div class="col-sm-9">
                                         <h3><%=team%> Detailed Responses </h3>
@@ -345,17 +338,9 @@
                                 </div>
                                 <hr class="margin-top-0">
                             <%
-                                //}
+                                
                             %>
                             </div>
-                        <%
-
-
-                        // Display detailed responses
-                        
-                        %>
-                            
-                        
                         <% 
                         
                             // display for giver
@@ -414,9 +399,6 @@
 
                                     <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
                                     <div class="panel-body">
-
-
-
                             <%
                                     // questions level
                                     int questionIndex = 0;
@@ -434,6 +416,12 @@
 
                                         List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
                                         for (String recipient : recipients) {
+                                            boolean isExistingResponse = responseBundle.containsKey(questionId) 
+                                                                        && responseBundle.get(questionId).containsKey(giver) 
+                                                                        && responseBundle.get(questionId).get(giver).containsKey(recipient);
+                                            if (!isExistingResponse) {
+                                                continue;
+                                            }
                                             responsesFromGiver.add(responseBundle.get(questionId).get(giver).get(recipient));
                                         }
 
@@ -445,12 +433,100 @@
                                                     out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
                                             </div>
 
-                                <%
+                                            <div class="panel-body padding-0">
+                            <%
+                                            if (!responsesFromGiver.isEmpty()) {
+                            %>
+                                                <div class="resultStatistics">
+                                                    <%=questionDetails.getQuestionResultStatisticsHtml(responsesFromGiver, question, data, data.bundle, "giver-question-recipient")%>
+                                                </div>
+                            <%
+                                            }
+                            %>
+                                                <table class="table table-striped table-bordered dataTable margin-0">
+                                                    <thead class="background-color-medium-gray text-color-gray font-weight-normal">
+                                                        <tr>
+                                                            <th>Photo</th>
+                                                            <th id="button_sortTo" class="button-sort-none" onclick="toggleSort(this,2)" style="width: 15%;">
+                                                                Recipient
+                                                                <span class="icon-sort unsorted"></span>
+                                                            </th>
+                                                            <th id="button_sortFromTeam" class="button-sort-ascending" onclick="toggleSort(this,3)" style="width: 15%;">
+                                                                Team
+                                                                <span class="icon-sort unsorted"></span>
+                                                            </th>
+                                                            <th id="button_sortFeedback" class="button-sort-none" onclick="toggleSort(this,4)">
+                                                                Feedback
+                                                                <span class="icon-sort unsorted"></span>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                <%
+                                                        for (String recipient : recipients) {
+                                                            FeedbackResponseAttributes feedbackResponse = null;
+                                                            if (responseBundle.containsKey(questionId) 
+                                                                && responseBundle.get(questionId).containsKey(giver) 
+                                                                && responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                                    feedbackResponse = responseBundle.get(questionId).get(giver).get(recipient);
+                                                                }
+
+                                                            boolean hasResponse = feedbackResponse != null;
+
+                                                            String recipientName = data.bundle.getNameForEmail(recipient);
+                                                            String recipientTeamName = data.bundle.getTeamNameForEmail(recipient);
 
 
-
-
-                                %>
+                                                %>
+                                                            <tr>
+                                                            <%
+                                                                if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, recipient).isEmpty()) {
+                                                            %>
+                                                                    <td class="middlealign">
+                                                                        <div class="profile-pic-icon-click align-center" data-link="<%=data.getProfilePictureLink(recipient)%>">
+                                                                            <a class="student-profile-pic-view-link btn-link">
+                                                                                View Photo
+                                                                            </a>
+                                                                            <img src="" alt="No Image Given" class="hidden">
+                                                                        </div>
+                                                                    </td>
+                                                            <%
+                                                                    } else {
+                                                            %>
+                                                                        <td class="middlealign">
+                                                                            <div class="align-center" data-link="">
+                                                                                <a class="student-profile-pic-view-link btn-link">
+                                                                                    No Photo
+                                                                                </a>
+                                                                            </div>
+                                                                        </td>
+                                                            <%
+                                                                    }
+                                                            %>
+                                                                <td class="middlealign"><%=recipientName%></td>
+                                                                <td class="middlealign"><%=recipientTeamName%></td>
+                                                            <%
+                                                                if (hasResponse) {
+                                                            %>
+                                                                    <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                                    <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(feedbackResponse, question)%></td>
+                                                            <%
+                                                                } else {
+                                                                    if (questionDetails.shouldShowNoResponseText(giver, recipient, question)) {
+                                                            %>  
+                                                                        <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                        <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
+                                                            <%  
+                                                                    }
+                                                                }
+                                                            %>
+                                                            </tr>
+                                                <%
+                                                        }
+                                                %>
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>   
 
 
@@ -471,9 +547,7 @@
                 <%
                         }
                        
-                
-                    
-                 
+                                
                     } // end team
                 %>
           
@@ -482,8 +556,6 @@
                 } // end section
                 
         %>
-           
-         
         <%
                 
             } /// show all
