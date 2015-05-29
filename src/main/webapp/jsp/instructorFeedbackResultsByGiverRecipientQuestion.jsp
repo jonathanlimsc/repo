@@ -188,13 +188,7 @@
                     int sectionIndex = 0;
                     int teamIndex = 0;
 
-                    Set<String> teamsInSection = new HashSet<String>();
-                    Set<String> givingTeams = new HashSet<String>();
-                                
-                    Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();
-                    Set<String> givingSections = new HashSet<String>();
-                                
-                    
+                    Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();                    
                     for (String section : sectionsInCourse) {
                         giverIndex++;
 
@@ -924,7 +918,6 @@
         <jsp:include page="<%=Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BOTTOM%>" />
         </div>
     </div>
-
     <jsp:include page="<%=Const.ViewURIs.FOOTER%>" />
 </body>
 </html>

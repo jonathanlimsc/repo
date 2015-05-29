@@ -172,324 +172,302 @@
             <%
             	   }
                 } else {  // showing all
+                    // map of (questionId > giverEmail > recipientEmail) > response
+                    Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getResponseBundle();                
+                    Map<String, FeedbackQuestionAttributes> questions = data.bundle.questions;
+                    int giverIndex = data.startIndex;
+                    int sectionIndex = 0;
+                    int teamIndex = 0;
+
+                    List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
+                    Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();
+                    for (String section : sectionsInCourse) {
+                        sectionIndex++;
+                        // Display header of section
             %>
-
-            
-            <%
-                // map of (questionId > giverEmail > recipientEmail) > response
-                Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getResponseBundle();
-                
-                Map<String, FeedbackQuestionAttributes> questions = data.bundle.questions;
-
-                int giverIndex = data.startIndex;
-                int sectionIndex = 0;
-                int teamIndex = 0;
-
-                Set<String> teamsInSection = new HashSet<String>();
-                Set<String> givingTeams = new HashSet<String>();
-                            
-                Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();
-                Set<String> givingSections = new HashSet<String>();
-
-                List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
-                            
-                
-                for (String section : sectionsInCourse) {
-                    sectionIndex++;
-
-                    // Display header of section
-            %>
-                    <div class="panel panel-success">
-                    <div class="panel-heading">
-                        <div class="row">
-                            <div class="col-sm-9 panel-heading-text">
-                                <strong><%=section.equals("None")? "Not in a section" : section%></strong>                        
-                            </div>
-                            <div class="col-sm-3">
-                                <div class="pull-right">
-                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
-                                        <%=shouldCollapsed ? "Expand " : "Collapse "%>
-                                        <%=groupByTeamEnabled == true ? "Teams" : "Students"%>
-                                    </a>
-                                    &nbsp;
-                                    <span class="glyphicon glyphicon-chevron-up"></span>
+                        <div class="panel panel-success">
+                        <div class="panel-heading">
+                            <div class="row">
+                                <div class="col-sm-9 panel-heading-text">
+                                    <strong><%=section.equals("None")? "Not in a section" : section%></strong>                        
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="pull-right">
+                                        <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
+                                            <%=shouldCollapsed ? "Expand " : "Collapse "%>
+                                            <%=groupByTeamEnabled == true ? "Teams" : "Students"%>
+                                        </a>
+                                        &nbsp;
+                                        <span class="glyphicon glyphicon-chevron-up"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="panel-collapse collapse in">
-                    <div class="panel-body" id="sectionBody-<%=sectionIndex%>">
-
-                <%
-
-                    List<String> giverTeams;
-                    if (groupByTeamEnabled) {
-                        giverTeams = new ArrayList<String>(data.bundle.rosterSectionTeamNameTable.get(section));
-                    } else {
-                        giverTeams = new ArrayList<String>();
-                        giverTeams.add(Const.DEFAULT_SECTION);
-                    }
-
-                    if (data.bundle.anonymousGiversInSection.containsKey(section)) {
-                        Set<String> anonymousGivers = data.bundle.anonymousGiversInSection.get(section); 
-                        for (String anonymousGiver : anonymousGivers) {
-                            giverTeams.add(data.bundle.getTeamNameForEmail(anonymousGiver));
+                        <div class="panel-collapse collapse in">
+                        <div class="panel-body" id="sectionBody-<%=sectionIndex%>">
+                    <%
+                        List<String> giverTeams;
+                        if (groupByTeamEnabled) {
+                            giverTeams = new ArrayList<String>(data.bundle.rosterSectionTeamNameTable.get(section));
+                        } else {
+                            giverTeams = new ArrayList<String>();
+                            giverTeams.add(Const.DEFAULT_SECTION);
                         }
-                    }
 
-                    // Iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
-                    for (String team : giverTeams) {
-                        List<String> givers;
+                        if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                            Set<String> anonymousGivers = data.bundle.anonymousGiversInSection.get(section); 
+                            for (String anonymousGiver : anonymousGivers) {
+                                giverTeams.add(data.bundle.getTeamNameForEmail(anonymousGiver));
+                            }
+                        }
 
-                        // Prepare feedback givers in the current team
-                        boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                                  && team != Const.DEFAULT_SECTION;
+                        // Iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
+                        for (String team : giverTeams) {
+                            List<String> givers;
 
-                        if (groupByTeamEnabled && !isAnonymousTeam) {
-                            givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
-                        } else if (groupByTeamEnabled && isAnonymousTeam) {
-                            givers = new ArrayList<String>();
-                            String giverName = team;
-                            giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
-                            givers.add(giverName);
-                        } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
-                            givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
-                            if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                            // Prepare feedback givers in the current team
+                            boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
+                                                      && team != Const.DEFAULT_SECTION;
+
+                            if (groupByTeamEnabled && !isAnonymousTeam) {
+                                givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
+                            } else if (groupByTeamEnabled && isAnonymousTeam) {
+                                givers = new ArrayList<String>();
+                                String giverName = team;
+                                giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                                givers.add(giverName);
+                            } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
+                                givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
+                                if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                                    for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
+                                        givers.add(anonymousGiver);
+                                    }
+                                }
+                            } else {
+                                givers = new ArrayList<String>();
                                 for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                                     givers.add(anonymousGiver);
                                 }
                             }
-                        } else {
-                            givers = new ArrayList<String>();
-                            for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
-                                givers.add(anonymousGiver);
+
+                            // add team to possible givers (for questions where the giver is TEAM)
+                            if (data.bundle.possibleRecipientsForGiver.containsKey(team)) {
+                                givers.add(team);
                             }
-                        }
-
-                        // add team to possible givers (for questions where the giver is TEAM)
-                        if (data.bundle.possibleRecipientsForGiver.containsKey(team)) {
-                            givers.add(team);
-                        }
-                        
-                        if (groupByTeamEnabled) {  // Display statistics for the whole team
-                    %>
-                            <div class="panel panel-warning">
-                            <div class="panel-heading">
-                                <div class="inline panel-heading-text">
-                                    <strong><%=team%></strong>
+                            
+                            if (groupByTeamEnabled) {  // Display statistics for the whole team
+                        %>
+                                <div class="panel panel-warning">
+                                <div class="panel-heading">
+                                    <div class="inline panel-heading-text">
+                                        <strong><%=team%></strong>
+                                    </div>
+                                    <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
                                 </div>
-                                <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
-                            </div>
-                            <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
-                            <div class="panel-body background-color-warning">
-                                <div class="resultStatistics">
-                           
+                                <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+                                <div class="panel-body background-color-warning">
+                                    <div class="resultStatistics">
+                               
 
-                                <h3><%=team%> Statistics for Given Responses </h3>
-                                <hr class="margin-top-0">   
-                    <%        
-                            	if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
-                                    // Display statistics for team
-                    %>
-                           
-                            <%
-                                // By Question
-                                int questionIndex = -1;
+                                    <h3><%=team%> Statistics for Given Responses </h3>
+                                    <hr class="margin-top-0">   
+                                <%        
+                                	if (data.bundle.mapOfQuestionResponsesForGiverTeam.containsKey(team)) {
+                                        // Display statistics for team
+                                %>
+                               
+                                <%
+                                    // By Question
+                                    int questionIndex = -1;
 
-                                for (String questionId : questionIds)  {
-                                    if (!data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).containsKey(questionId)) {
-                                        continue;
-                                    }
+                                    for (String questionId : questionIds)  {
+                                        if (!data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).containsKey(questionId)) {
+                                            continue;
+                                        }
 
-                                    FeedbackQuestionAttributes question = questions.get(questionId);
-                                    FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
-                                    String statsHtml = questionDetails.getQuestionResultStatisticsHtml(
-                                                                            data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).
-                                                                            get(questionId), question, data, data.bundle, "giver-question-recipient");
+                                        FeedbackQuestionAttributes question = questions.get(questionId);
+                                        FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
+                                        String statsHtml = questionDetails.getQuestionResultStatisticsHtml(
+                                                                                data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).
+                                                                                get(questionId), question, data, data.bundle, "giver-question-recipient");
 
 
-                                    if (statsHtml != "") {
-                            %>
-                                        <div class="panel panel-info">
-                                            <div class="panel-heading">
-                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                <strong>Question <%=question.questionNumber%>: </strong><span class="text-preserve-space"><%=data.bundle.getQuestionText(questionId)%><%
-                                                    out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, ""));
-                                                %></span>
-                                            </div>
-                                            <div class="panel-body padding-0">                
-                                                <div class="resultStatistics">
-                                                    <%=statsHtml%>
+                                        if (statsHtml != "") {
+                                %>
+                                            <div class="panel panel-info">
+                                                <div class="panel-heading">
+                                                    <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                    <strong>Question <%=question.questionNumber%>: </strong><span class="text-preserve-space"><%=data.bundle.getQuestionText(questionId)%><%
+                                                        out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, ""));
+                                                    %></span>
+                                                </div>
+                                                <div class="panel-body padding-0">                
+                                                    <div class="resultStatistics">
+                                                        <%=statsHtml%>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                <%
+                                        }
+                                    }
+                                %>
+                                    
+                            <%
+                                    } else {
+                            %>
+                                        <p class="text-color-gray"><i>No statistics available.</i></p>
                             <%
                                     }
-                                }
-                            %>
                                 
-                        <%
-                                } else {
-                        %>
-                                    <p class="text-color-gray"><i>No statistics available.</i></p>
-                        <%
-                                }
-                            
-                        }   // end of team statistics
-                        else  {
+                            }   // end of team statistics
+                            else {
 
                         %>
-                            <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+                                <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
 
                         <%
-                        }
-
+                            }
                         %>
-                        
-                                <div class="row">
-                                    <div class="col-sm-9">
-                                        <h3><%=team%> Detailed Responses </h3>
+                                    <div class="row">
+                                        <div class="col-sm-9">
+                                            <h3><%=team%> Detailed Responses </h3>
+                                        </div>
+                                        <div class="col-sm-3 h3">
+                                            <a class="btn btn-warning btn-xs pull-right" id="collapse-panels-button-team-<%=teamIndex%>" data-toggle="tooltip" title="Collapse or expand all student panels. You can also click on the panel heading to toggle each one individually.">
+                                                <%=shouldCollapsed ? "Expand " : "Collapse "%> Students
+                                            </a>
+                                        </div>
                                     </div>
-                                    <div class="col-sm-3 h3">
-                                        <a class="btn btn-warning btn-xs pull-right" id="collapse-panels-button-team-<%=teamIndex%>" data-toggle="tooltip" title="Collapse or expand all student panels. You can also click on the panel heading to toggle each one individually.">
-                                            <%=shouldCollapsed ? "Expand " : "Collapse "%> Students
-                                        </a>
-                                    </div>
+                                    <hr class="margin-top-0">
                                 </div>
-                                <hr class="margin-top-0">
-                            <%
-                                
+                            <% 
+                                Collections.sort(givers);
+                                // display for giver
+                                for (String giver : givers) {
+                                    String giverIdentifier = giver.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                                    giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
+                                	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
+
+                                    boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
+
+                                    String panelClass = isGiverWithResponses ? "panel-primary" : "panel-default";
+                                    String buttonClass = isGiverWithResponses ? "btn-primary" : "btn-default";
                             %>
-                            </div>
-                        <% 
-                            Collections.sort(givers);
-                            // display for giver
-                            for (String giver : givers) {
-                                String giverIdentifier = giver.replace(Const.TEAM_OF_EMAIL_OWNER, "");
-                                giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
-                            	String mailtoStyleAttr = (data.bundle.isEmailOfPersonFromRoster(giver))?"style=\"display:none;\"":"";
-
-                                boolean isGiverWithResponses = data.bundle.possibleRecipientsForGiver.containsKey(giver);
-
-                                String panelClass = isGiverWithResponses ? "panel-primary" : "panel-default";
-                                String buttonClass = isGiverWithResponses ? "btn-primary" : "btn-default";
-                        %>
-                                <div class="panel <%= panelClass %>">
-                                <div class="panel-heading">
-                                    From: 
-                                    <%
-                                        if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, giver).isEmpty()) {
-                                    %>
-                                            <div class="middlealign profile-pic-icon-hover inline panel-heading-text" data-link="<%=data.getProfilePictureLink(giver)%>">
+                                    <div class="panel <%= panelClass %>">
+                                    <div class="panel-heading">
+                                        From: 
+                                        <%
+                                            if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, giver).isEmpty()) {
+                                        %>
+                                                <div class="middlealign profile-pic-icon-hover inline panel-heading-text" data-link="<%=data.getProfilePictureLink(giver)%>">
+                                                    <strong><%=giverIdentifier%></strong>
+                                                    <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
+                                                    <a class="link-in-dark-bg" href="mailTo:<%=giver%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
+                                                </div>
+                                        <%
+                                            } else {
+                                        %>
+                                            <div class="inline panel-heading-text">
                                                 <strong><%=giverIdentifier%></strong>
-                                                <img src="" alt="No Image Given" class="hidden profile-pic-icon-hidden">
                                                 <a class="link-in-dark-bg" href="mailTo:<%=giver%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
                                             </div>
+                                        <%
+                                            }
+                                            // Moderations button    
+                                        %>
+
+                                        <div class="pull-right">
+                                        <% 
+                                            boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(giver), 
+                                                                                                             data.feedbackSessionName, 
+                                                                                                             Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
+                                            String disabledAttribute = !isAllowedToModerate? "disabled=\"disabled\"" : "";
+                                            if (data.bundle.isParticipantIdentifierStudent(giver)) { 
+                                        %>
+                                                <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
+                                                
+                                                    <input type="submit" class="btn <%=buttonClass %> btn-xs" value="Moderate Responses" <%= disabledAttribute %> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
+                                                    <input type="hidden" name="courseid" value="<%=data.courseId %>">
+                                                    <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
+                                                    <input type="hidden" name="moderatedstudent" value=<%= giver%>>
+                                                
+                                                </form>
+                                        <% 
+                                            } // End of Moderations button
+                                            // Close giver's header
+                                        %>
+                                            &nbsp;
+                                            <div class="display-icon" style="display:inline;">
+                                                <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
+                                            </div>                
+                                        </div>
+                                    </div>
+
+                                        <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
+                                        <div class="panel-body">
                                     <%
-                                        } else {
+
+                                         if (!isGiverWithResponses) {
+                                            // display 'no responses' msg
                                     %>
-                                        <div class="inline panel-heading-text">
-                                            <strong><%=giverIdentifier%></strong>
-                                            <a class="link-in-dark-bg" href="mailTo:<%=giver%> " <%=mailtoStyleAttr%>>[<%=giver%>]</a>
+                                            <i>There are no responses given by this user</i>
+                                        </div> <!-- close giver tags TODO: dont do this like this -->
+                                        </div>
                                         </div>
                                     <%
+                                            continue; // skip to the next giver
                                         }
-                                        // Moderations button    
                                     %>
-
-                                    <div class="pull-right">
-                                    <% 
-                                        boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(giver), 
-                                                                                                         data.feedbackSessionName, 
-                                                                                                         Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                        String disabledAttribute = !isAllowedToModerate? "disabled=\"disabled\"" : "";
-                                        if (data.bundle.isParticipantIdentifierStudent(giver)) { 
-                                    %>
-                                            <form class="inline" method="post" action="<%=data.getInstructorEditStudentFeedbackLink() %>" target="_blank"> 
-                                            
-                                                <input type="submit" class="btn <%=buttonClass %> btn-xs" value="Moderate Responses" <%= disabledAttribute %> data-toggle="tooltip" title="<%=Const.Tooltips.FEEDBACK_SESSION_MODERATE_FEEDBACK%>">
-                                                <input type="hidden" name="courseid" value="<%=data.courseId %>">
-                                                <input type="hidden" name="fsname" value="<%= data.feedbackSessionName%>">
-                                                <input type="hidden" name="moderatedstudent" value=<%= giver%>>
-                                            
-                                            </form>
-                                    <% 
-                                        } // End of Moderations button
-                                        // Close giver's header
-                                    %>
-                                        &nbsp;
-                                        <div class="display-icon" style="display:inline;">
-                                            <span class='glyphicon <%=!shouldCollapsed ? "glyphicon-chevron-up" : "glyphicon-chevron-down"%> pull-right'></span>
-                                        </div>                
-                                    </div>
-                                </div>
-
-                                    <div class='panel-collapse collapse <%=shouldCollapsed ? "" : "in"%>'>
-                                    <div class="panel-body">
-                                <%
-
-                                     if (!isGiverWithResponses) {
-                                        // display 'no responses' msg
-                                %>
-                                        <i>There are no responses given by this user</i>
-                                    </div> <!-- close giver tags TODO: dont do this like this -->
-                                    </div>
-                                    </div>
-                                <%
-                                        continue; // skip to the next giver
-                                    }
-                                %>
-                                <%
-                                    // questions level
-                                    int questionIndex = 0;
-                                    for (String questionId : questionIds) {
-                                        FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
-                                        FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
-
-                                        if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver)) {
-                                            // no response for current (question, giver, *)
-                                            continue;   
-                                        }
-
-                                        questionIndex += 1;
-
-                                        // First, get all responses from the giver
-                                        List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
-
-                                        boolean isResponsesEmpty = !data.bundle.possibleRecipientsForGiver.containsKey(giver);
-                                        if (isResponsesEmpty) {
-                                            break;      
-                                        }
-
-                                        List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
-                                        for (String recipient : recipients) {
-                                            boolean isExistingResponse = responseBundle.containsKey(questionId) 
-                                                                        && responseBundle.get(questionId).containsKey(giver) 
-                                                                        && responseBundle.get(questionId).get(giver).containsKey(recipient);
-                                            if (!isExistingResponse) {
-                                                continue;
+                                    <%
+                                        // questions level
+                                        int questionIndex = 0;
+                                        for (String questionId : questionIds) {
+                                            FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
+                                            FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
+                                            if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver)) {
+                                                // no response for current (question, giver, *)
+                                                continue;   
                                             }
-                                            responsesFromGiver.add(responseBundle.get(questionId).get(giver).get(recipient));
-                                        }
 
-                            %>
-                                        <div class="panel panel-info">
-                                            <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                            <div class="panel-heading">Question <%=question.questionNumber%>: 
-                                                <span class="text-preserve-space"><%
-                                                        out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
-                                            </div>
+                                            questionIndex += 1;
 
-                                            <div class="panel-body padding-0">
-                            <%
-                                            if (!responsesFromGiver.isEmpty()) {
-                            %>
-                                                <div class="resultStatistics">
-                                                    <%=questionDetails.getQuestionResultStatisticsHtml(responsesFromGiver, question, data, data.bundle, "giver-question-recipient")%>
+                                            // Get all responses from the giver
+                                            List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
+
+                                            boolean isResponsesEmpty = !data.bundle.possibleRecipientsForGiver.containsKey(giver);
+                                            if (isResponsesEmpty) {
+                                                break;      
+                                            }
+
+                                            List<String> recipients = new ArrayList<String>(data.bundle.possibleRecipientsForGiver.get(giver));
+                                            for (String recipient : recipients) {
+                                                boolean isExistingResponse = responseBundle.containsKey(questionId) 
+                                                                            && responseBundle.get(questionId).containsKey(giver) 
+                                                                            && responseBundle.get(questionId).get(giver).containsKey(recipient);
+                                                if (!isExistingResponse) {
+                                                    continue;
+                                                }
+                                                responsesFromGiver.add(responseBundle.get(questionId).get(giver).get(recipient));
+                                            }
+                                    %>
+                                            <div class="panel panel-info">
+                                                <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                <div class="panel-heading">Question <%=question.questionNumber%>: 
+                                                    <span class="text-preserve-space"><%
+                                                            out.print(InstructorFeedbackResultsPageData.sanitizeForHtml(questionDetails.questionText));
+                                                            out.print(questionDetails.getQuestionAdditionalInfoHtml(question.questionNumber, "giver-"+giverIndex+"-question-"+questionIndex));%></span>
                                                 </div>
-                            <%
-                                            }
-                            %>
+
+                                                <div class="panel-body padding-0">
+                                            <%
+                                                if (!responsesFromGiver.isEmpty()) {
+                                            %>
+                                                    <div class="resultStatistics">
+                                                        <%=questionDetails.getQuestionResultStatisticsHtml(responsesFromGiver, question, data, data.bundle, "giver-question-recipient")%>
+                                                    </div>
+                                            <%
+                                                }
+                                            %>
                                                 <table class="table table-striped table-bordered dataTable margin-0">
                                                     <thead class="background-color-medium-gray text-color-gray font-weight-normal">
                                                         <tr>
@@ -509,7 +487,7 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                <%
+                                                    <%
                                                         List<String> possibleReceivers = 
                                                                 question.giverType.isTeam() ? 
                                                                 data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
@@ -528,77 +506,76 @@
                                                             String recipientName = data.bundle.getNameForEmail(recipient);
                                                             String recipientTeamName = data.bundle.getTeamNameForEmail(recipient);
 
-                                                            if (hasResponse || questionDetails.shouldShowNoResponseText(giver, recipient, question)) {
-                                                %>
-                                                            <tr>
-                                                            <%
-                                                                if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, recipient).isEmpty()) {
-                                                            %>
-                                                                    <td class="middlealign">
-                                                                        <div class="profile-pic-icon-click align-center" data-link="<%=data.getProfilePictureLink(recipient)%>">
-                                                                            <a class="student-profile-pic-view-link btn-link">
-                                                                                View Photo
-                                                                            </a>
-                                                                            <img src="" alt="No Image Given" class="hidden">
-                                                                        </div>
-                                                                    </td>
-                                                            <%
-                                                                    } else {
-                                                            %>
+                                                            if (hasResponse 
+                                                                 || questionDetails.shouldShowNoResponseText(giver, recipient, question)) {
+                                                    %>
+                                                                <tr>
+                                                                <%
+                                                                    if (validator.getInvalidityInfo(FieldValidator.FieldType.EMAIL, recipient).isEmpty()) {
+                                                                %>
                                                                         <td class="middlealign">
-                                                                            <div class="align-center" data-link="">
+                                                                            <div class="profile-pic-icon-click align-center" data-link="<%=data.getProfilePictureLink(recipient)%>">
                                                                                 <a class="student-profile-pic-view-link btn-link">
-                                                                                    No Photo
+                                                                                    View Photo
                                                                                 </a>
+                                                                                <img src="" alt="No Image Given" class="hidden">
                                                                             </div>
                                                                         </td>
-                                                            <%
+                                                                <%
+                                                                        } else {
+                                                                %>
+                                                                            <td class="middlealign">
+                                                                                <div class="align-center" data-link="">
+                                                                                    <a class="student-profile-pic-view-link btn-link">
+                                                                                        No Photo
+                                                                                    </a>
+                                                                                </div>
+                                                                            </td>
+                                                                <%
+                                                                        }
+                                                                %>
+                                                                    <td class="middlealign"><%=recipientName%></td>
+                                                                    <td class="middlealign"><%=recipientTeamName%></td>
+                                                                <%
+                                                                    if (hasResponse) {
+                                                                %>
+                                                                        <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                                        <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(feedbackResponse, question)%></td>
+                                                                <%
+                                                                    } else {
+                                                                %>  
+                                                                        <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
+                                                                        <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
+                                                                <%  
                                                                     }
-                                                            %>
-                                                                <td class="middlealign"><%=recipientName%></td>
-                                                                <td class="middlealign"><%=recipientTeamName%></td>
-                                                            <%
-                                                                if (hasResponse) {
-                                                            %>
-                                                                    <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                                    <td class="text-preserve-space"><%=data.bundle.getResponseAnswerHtml(feedbackResponse, question)%></td>
-                                                            <%
-                                                                } else {
-
-                                                            %>  
-                                                                    <!--Note: When an element has class text-preserve-space, do not insert and HTML spaces-->
-                                                    <td class="text-preserve-space color_neutral"><%=questionDetails.getNoResponseTextInHtml(giver, recipient, data.bundle, question)%></td>                                                             
-                                                            <%  
-                                                                }
-                                                            %>
-                                                            </tr>
-                                                <%  
+                                                                %>
+                                                                </tr>
+                                                    <%  
                                                             } // end of should show no response text
                                                         }   // end of recipient loop
-                                                %>
+                                                    %>
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>   
-                            <%
-                                    } // End question
-                            %> 
-                                </div>
-                                </div></div>
-                <% 
-                            } // end giver
-                            if (groupByTeamEnabled) {
-                %>
-                                </div></div></div>
-                <%
-                            }
-                            
-                    } // end team
-                %>
-                </div></div></div>
-        <%
-                } // end section
-        %>
+                                <%
+                                        } // End question
+                                %> 
+                                    </div>
+                                    </div></div>
+                    <% 
+                                } // end giver
+                                if (groupByTeamEnabled) {
+                    %>
+                                    </div></div></div>
+                    <%
+                                }
+                        } // end team
+                    %>
+                    </div></div></div>
+            <%
+                    } // end section
+            %>
         <%
             } /// show all
         %>
