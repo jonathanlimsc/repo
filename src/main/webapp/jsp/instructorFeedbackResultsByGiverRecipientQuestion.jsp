@@ -17,11 +17,11 @@
 <%@ page import="teammates.common.datatransfer.FeedbackQuestionDetails"%>
 <%@ page import="teammates.common.datatransfer.FeedbackQuestionAttributes"%>
 <%
-	InstructorFeedbackResultsPageData data = (InstructorFeedbackResultsPageData) request.getAttribute("data");
+    InstructorFeedbackResultsPageData data = (InstructorFeedbackResultsPageData) request.getAttribute("data");
     FieldValidator validator = new FieldValidator();
-    boolean showAll = data.bundle.isComplete;
+    boolean isShowingAllSections = data.bundle.isComplete;
     boolean shouldCollapsed = data.bundle.responses.size() > 500;
-    boolean groupByTeamEnabled = (data.groupByTeam == null || !data.groupByTeam.equals("on")) ? false : true;
+    boolean isGroupByTeamEnabled = (data.groupByTeam == null || !data.groupByTeam.equals("on")) ? false : true;
 %>
 <!DOCTYPE html>
 <html>
@@ -69,7 +69,7 @@
             <br>
 
             <%
-            	if (!showAll) {
+                if (!isShowingAllSections) {
                     if (data.selectedSection.equals("All")) {
                         int sectionIndex = 0; 
                         for (String section: data.sections) {
@@ -82,9 +82,9 @@
                                         </div>
                                         <div class="col-sm-3">
                                             <div class="pull-right">
-                                                <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
+                                                <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
                                                     Expand
-                                                    <%= groupByTeamEnabled == true ? " Teams" : " Students" %>
+                                                    <%= isGroupByTeamEnabled == true ? " Teams" : " Students" %>
                                                 </a>
                                                 &nbsp;
                                                 <div class="display-icon" style="display:inline;">
@@ -112,7 +112,7 @@
                                 </div>
                             </div>
                     <%
-            	           sectionIndex++;
+                           sectionIndex++;
                         }
                     %>
                         <div class="panel panel-success">
@@ -123,9 +123,9 @@
                                             </div>
                                             <div class="col-sm-3">
                                                 <div class="pull-right">
-                                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
+                                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
                                                         Expand
-                                                        <%=groupByTeamEnabled == true ? " Teams" : " Students"%>
+                                                        <%=isGroupByTeamEnabled == true ? " Teams" : " Students"%>
                                                     </a>
                                                     &nbsp;
                                                     <div class="display-icon" style="display:inline;">
@@ -152,7 +152,7 @@
                                 </div>
                         </div>
                 <%
-            	    } else {
+                    } else {
                     // Display warning for too many responses to be displayed normally. (View by sections msg)
                 %>
                         <div class="panel panel-success">
@@ -175,14 +175,12 @@
                             </div>
                         </div>
             <%
-            	    }
+                    }
                 } else {
+                    // Actual display of the contents of the page starts here
             %>
 
             <%
-                	// map of (questionId > giverEmail > recipientEmail) > response
-                    Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle = data.bundle.getResponseBundle();
-                    
                     Map<String, FeedbackQuestionAttributes> questions = data.bundle.questions;
 
                     int giverIndex = data.startIndex;
@@ -206,9 +204,9 @@
                                     </div>
                                     <div class="col-sm-3">
                                         <div class="pull-right">
-                                            <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=groupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
+                                            <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
                                                 <%=shouldCollapsed ? "Expand " : "Collapse "%>
-                                                <%=groupByTeamEnabled == true ? "Teams" : "Students"%>
+                                                <%=isGroupByTeamEnabled == true ? "Teams" : "Students"%>
                                             </a>
                                             &nbsp;
                                             <span class="glyphicon glyphicon-chevron-up"></span>
@@ -222,7 +220,7 @@
                     <%
 
                         List<String> giverTeams;
-                        if (groupByTeamEnabled) {
+                        if (isGroupByTeamEnabled) {
                             giverTeams = new ArrayList<String>(data.bundle.getMembersOfSection(section));
                         } else {
                             giverTeams = new ArrayList<String>();
@@ -242,22 +240,23 @@
 
                             // Prepare feedback givers in the current team
                             boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                                      && groupByTeamEnabled
+                                                      && isGroupByTeamEnabled
                                                       && !team.equals(Const.GENERAL_QUESTION)
                                                       && (!team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) 
                                                           && section.equals(Const.DEFAULT_SECTION));
 
 
-                            if (groupByTeamEnabled && !isAnonymousTeam) {
-                                givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
-                            } else if (groupByTeamEnabled && isAnonymousTeam) {
+                            if (isGroupByTeamEnabled && !isAnonymousTeam) {
+                                givers = data.bundle.getMembersOfNonAnonymousTeam(team);
+                                givers.remove(Const.GENERAL_QUESTION); // remove %GENERAL% (No specific participant) as it cannot be a givers
+                            } else if (isGroupByTeamEnabled && isAnonymousTeam) {
                                 // handles the case where the team is of an anonymous giver, the only member in the team is the giver himself
                                 // e.g. Anonymous teams are "Anonymous student .*'s Team" => the only student in the team is "Anonymous student .*"
                                 givers = new ArrayList<String>();
                                 String giverName = team;
                                 giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                                 givers.add(giverName);
-                            } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
+                            } else if (!isGroupByTeamEnabled && !isAnonymousTeam) { 
                                 givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
                                 boolean isSectionContainingAnonymousGivers = data.bundle.anonymousGiversInSection.containsKey(section);
                                 if (isSectionContainingAnonymousGivers) {
@@ -280,7 +279,7 @@
                                 givers.add(team);
                             }
                             
-                            if (groupByTeamEnabled) {
+                            if (isGroupByTeamEnabled) {
                                 // Display header of group
                     %>
                                 <div class="panel panel-warning">
@@ -384,18 +383,16 @@
                                                 String questionId = questionEntry.getKey();
                                                 FeedbackQuestionAttributes question = questionEntry.getValue();
 
-                                                if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) 
-                                                    || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                if (!data.bundle.isExistingResponse(questionId, giver, recipient)) {
                                                     // no response for current (question, giver, recipient)
                                                     continue;   
                                                 }
-                                                FeedbackResponseAttributes singleResponse = responseBundle.get(questionId).get(giver).get(recipient);
+                                                FeedbackResponseAttributes singleResponse = data.bundle.getFeedbackResponse(questionId, giver, recipient);
 
                                                 boolean isResponseInRightSection = singleResponse.giverSection.equals(section);
                                                 if (!isResponseInRightSection) {
                                                     continue;
                                                 }
-
                                                 isResponseBetweenGiverAndRecipientExist = true;
                                         }
 
@@ -448,19 +445,17 @@
                                                 String questionId = questionEntry.getKey();
                                                 FeedbackQuestionAttributes question = questionEntry.getValue();
 
-                                                if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) 
-                                                    || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                if (!data.bundle.isExistingResponse(questionId, giver, recipient)) {
                                                     // no response for current (question, giver, recipient)
                                                     continue;   
                                                 }
-                                                FeedbackResponseAttributes singleResponse = responseBundle.get(questionId).get(giver).get(recipient);
+                                                FeedbackResponseAttributes singleResponse = data.bundle.getFeedbackResponse(questionId, giver, recipient);
 
                                                 boolean isResponseInRightSection = singleResponse.giverSection.equals(section);
                                                 if (!isResponseInRightSection) {
                                                     continue;
                                                 }
                                                 FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
-
                                                 // start of response display, includes UI for adding/editing comments
                                           %>
                                                 <div class="panel panel-info">
@@ -947,7 +942,7 @@
                                 </div></div></div>
                     <%
                             }  //end giver
-                            if (groupByTeamEnabled) {
+                            if (isGroupByTeamEnabled) {
                     %>
                                 </div></div></div>
                 <%  

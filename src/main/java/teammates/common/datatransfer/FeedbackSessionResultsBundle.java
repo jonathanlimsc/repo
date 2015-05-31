@@ -130,7 +130,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.rosterSectionTeamNameTable = getSectionToTeamNamesFromRoster(roster);
         this.rosterSectionStudentTable = getSectionStudentTableFromRoster(roster);
         
-        this.responseBundle =  getResponseBundle();
+        this.responseBundle = getResponseBundle();
     }
     
     
@@ -268,13 +268,13 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         }
     }
     
-    public boolean isResponseExist(String questionId, 
+    public boolean isExistingResponse(String questionId, 
                                    String giver, 
                                    String recipient) {
         
-        return  !responseBundle.containsKey(questionId) 
-             || !responseBundle.get(questionId).containsKey(giver)
-             || !responseBundle.get(questionId).get(giver).containsKey(recipient);
+        return  responseBundle.containsKey(questionId) 
+             && responseBundle.get(questionId).containsKey(giver)
+             && responseBundle.get(questionId).get(giver).containsKey(recipient);
     }
     
     public FeedbackResponseAttributes getFeedbackResponse(String questionId, 
@@ -517,6 +517,18 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         
         return null;
     }
+    
+    public List<String> getMembersOfNonAnonymousTeam(String teamName) {
+        List<String> givers = new ArrayList<String>();
+        if (rosterTeamNameMembersTable.containsKey(teamName)) {
+            givers = new ArrayList<String>(rosterTeamNameMembersTable.get(teamName));
+        } else {
+            givers = new ArrayList<String>();
+            givers.add("-");
+        }
+        return givers;
+    }
+    
     /**
      * Get the emails of the students given a teamName,
      * if teamName is "Instructors", returns the list of instructors.
