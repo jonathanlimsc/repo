@@ -40,7 +40,9 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public Map<String, boolean[]> visibilityTable = null;
     
     // Recipients of existing responses by the specified giver
-    public Map<String, Set<String>> existingRecipientsForGiver = null;
+    public Map<String, Set<String>> existingRecipientsForStudentGiver = null;
+    public Map<String, Set<String>> existingRecipientsForInstructorGiver = null;
+    
     // Givers of existing responses received by the specified recipient
     public Map<String, Set<String>> existingGiversForRecipient = null;
     
@@ -134,43 +136,45 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     }
     
     
-    public void constructTablesForPossibleGiversAndRecipientsFromResponses() {
-        existingRecipientsForGiver = new HashMap<String, Set<String>>();
+    public void constructTablesForPossibleAndAnonymousGiversFromResponses() {
+        existingRecipientsForStudentGiver = new HashMap<String, Set<String>>();
+        existingRecipientsForInstructorGiver = new HashMap<String, Set<String>>();
         existingGiversForRecipient = new HashMap<String, Set<String>>();
         
         for (FeedbackResponseAttributes response : this.responses) {
             FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
-            String giverIdentifier;
+            String giverIdentifier = response.giverEmail;
+            
+            if (question.giverType == FeedbackParticipantType.INSTRUCTORS 
+                || question.giverType == FeedbackParticipantType.SELF) {
+                if (existingRecipientsForStudentGiver.containsKey(giverIdentifier)) {
+                    Set<String> recipientsForGiver = existingRecipientsForStudentGiver.get(giverIdentifier);
+                    recipientsForGiver.add(response.recipientEmail);
+                } else {
+                    Set<String> recipientsForGiver = new HashSet<>();
+                    recipientsForGiver.add(response.recipientEmail);
+                    existingRecipientsForStudentGiver.put(giverIdentifier, recipientsForGiver);
+                }
+            }
             
             // normalise the giver name i.e. ".*'s team" converted to actual team name
             if (question.giverType.isTeam()) {
                 giverIdentifier = response.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                 giverIdentifier = getTeamNameForEmail(giverIdentifier);
-            } else {
-                giverIdentifier = response.giverEmail;
-            }
-            if (existingRecipientsForGiver.containsKey(giverIdentifier)) {
-                Set<String> recipientsForGiver = existingRecipientsForGiver.get(giverIdentifier);
+            } 
+            
+            if (existingRecipientsForStudentGiver.containsKey(giverIdentifier)) {
+                Set<String> recipientsForGiver = existingRecipientsForStudentGiver.get(giverIdentifier);
                 recipientsForGiver.add(response.recipientEmail);
             } else {
                 Set<String> recipientsForGiver = new HashSet<>();
                 recipientsForGiver.add(response.recipientEmail);
-                existingRecipientsForGiver.put(giverIdentifier, recipientsForGiver);
-            }
-            
-            if (existingGiversForRecipient.containsKey(response.recipientEmail)) {
-                Set<String> giversForRecipient = existingGiversForRecipient.get(response.recipientEmail);
-                giversForRecipient.add(giverIdentifier);
-            } else {
-                Set<String> giversForRecipient = new HashSet<>();
-                giversForRecipient.add(giverIdentifier);
-                existingGiversForRecipient.put(response.recipientEmail, giversForRecipient);
+                existingRecipientsForStudentGiver.put(giverIdentifier, recipientsForGiver);
             }
         }
         
         anonymousGiversInSection = new HashMap<String, Set<String>>();
-        anonymousRecipientsInSection = new HashMap<String, Set<String>>();
-        
+       
         for (FeedbackResponseAttributes response : this.responses) {
             if (!isResponseGiverVisible(response)) {
                 String sectionName = response.giverSection;
@@ -183,18 +187,6 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                     anonymousGiversInSection.put(sectionName, anonymousGivers);
                 }
             }
-            
-            if (!isResponseRecipientVisible(response)) {
-                String sectionName = response.recipientSection;
-                if (anonymousRecipientsInSection.containsKey(sectionName)) {
-                    Set<String> anonymousRecipients = anonymousRecipientsInSection.get(sectionName);
-                    anonymousRecipients.add(response.recipientEmail);
-                } else {
-                    Set<String> anonymousRecipients = new HashSet<>();
-                    anonymousRecipients.add(response.recipientEmail);
-                    anonymousRecipientsInSection.put(sectionName, anonymousRecipients);
-                }
-            }
         }
     }
     
@@ -202,7 +194,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         mapOfQuestionResponsesForGiverTeam = new HashMap<String, Map<String, List<FeedbackResponseAttributes>>>();
         
         for (FeedbackResponseAttributes response : responses) {
-            FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
+            //FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
             
             String giver = response.giverEmail;
             String giverTeam = getTeamNameForEmail(giver);
@@ -269,8 +261,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     }
     
     public boolean isExistingResponse(String questionId, 
-                                   String giver, 
-                                   String recipient) {
+                                      String giver, 
+                                      String recipient) {
         
         return  responseBundle.containsKey(questionId) 
              && responseBundle.get(questionId).containsKey(giver)
@@ -527,6 +519,72 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
             givers.add("-");
         }
         return givers;
+    }
+    
+    /**
+     * Returns true if the team is an anonymous team.
+     * This is done by checking if the results are grouped by teams, 
+     *      and if the roster contains the team name, and if the team name
+     *      is a special value.  
+     * @param section
+     * @param team
+     * @param isGroupByTeamEnabled
+     * @return
+     */
+    public boolean isAnonymousTeam(String section, String team, boolean isGroupByTeamEnabled) {
+        return isGroupByTeamEnabled
+                && !rosterTeamNameMembersTable.containsKey(team)
+                && !team.equals(Const.GENERAL_QUESTION)
+                && (!team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) 
+                    && section.equals(Const.DEFAULT_SECTION));
+    }
+    
+    public List<String> getPossibleGiversInTeam(boolean isGroupByTeamEnabled,
+                                                boolean isAnonymousTeam,
+                                                String section, String team) {
+        List<String> givers;
+        if (isGroupByTeamEnabled && !isAnonymousTeam) {
+            givers = getMembersOfNonAnonymousTeam(team);
+        } else if (isGroupByTeamEnabled && isAnonymousTeam) {
+            // handles the case where the team is of an anonymous giver, the only member in the team is the giver himself
+            // e.g. Anonymous teams are "Anonymous student .*'s Team" => the only student in the team is "Anonymous student .*"
+            givers = new ArrayList<String>();
+            String giverName = team;
+            giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+            givers.add(giverName);
+        } else if (!isGroupByTeamEnabled && !isAnonymousTeam) { 
+            givers = new ArrayList<String>(rosterSectionStudentTable.get(section));
+            boolean isSectionContainingAnonymousGivers = anonymousGiversInSection.containsKey(section);
+            if (isSectionContainingAnonymousGivers) {
+                for (String anonymousGiver : anonymousGiversInSection.get(section)) {
+                    givers.add(anonymousGiver);
+                }
+            }
+        } else {
+            givers = new ArrayList<String>();
+            String giverName = team;
+            giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+            givers.add(giverName);
+
+            for (String anonymousGiver : anonymousGiversInSection.get(section)) {
+               givers.add(anonymousGiver);
+            }
+        }
+        
+        // add team to possible givers (for questions where the giver is TEAM)
+        if (existingRecipientsForStudentGiver.containsKey(team)) {
+            givers.add(team);
+        }
+        
+        return givers;
+    }
+    
+    public boolean isInstructorGiver(String instructorIdentifier) {
+        return existingRecipientsForInstructorGiver.containsKey(instructorIdentifier);
+    }
+    
+    public boolean isStudentGiver(String studentIdentifier) {
+        return existingRecipientsForStudentGiver.containsKey(studentIdentifier);
     }
     
     /**

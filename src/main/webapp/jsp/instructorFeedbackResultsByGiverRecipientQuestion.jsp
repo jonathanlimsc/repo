@@ -200,13 +200,13 @@
                             <div class="panel-heading">
                                 <div class="row">
                                     <div class="col-sm-9 panel-heading-text">
-                                        <strong><%=section.equals("None")? "Not in a section" : section%></strong>                        
+                                        <strong><%=section.equals("None") ? "Not in a section" : section%></strong>                        
                                     </div>
                                     <div class="col-sm-3">
                                         <div class="pull-right">
                                             <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
                                                 <%=shouldCollapsed ? "Expand " : "Collapse "%>
-                                                <%=isGroupByTeamEnabled == true ? "Teams" : "Students"%>
+                                                <%=isGroupByTeamEnabled ? "Teams" : "Students"%>
                                             </a>
                                             &nbsp;
                                             <span class="glyphicon glyphicon-chevron-up"></span>
@@ -224,7 +224,7 @@
                             giverTeams = new ArrayList<String>(data.bundle.getMembersOfSection(section));
                         } else {
                             giverTeams = new ArrayList<String>();
-                            giverTeams.add(Const.DEFAULT_SECTION);
+                            giverTeams.add(Const.DEFAULT_SECTION);  // iterate through a dummy team
                         }
 
                         if (data.bundle.anonymousGiversInSection.containsKey(section)) {
@@ -236,48 +236,13 @@
 
                         // Iterate through the teams. If not grouped by team, a dummy team value, DEFAULT_SECTION, is iterated through once.
                         for (String team : giverTeams) {
-                            List<String> givers;
-
+                            if (team.equals(Const.GENERAL_QUESTION)) { // in Giver >*>*, skip %GENERAL% (No specific participant) as it cannot be a giver
+                                continue;                           
+                            }
+  
                             // Prepare feedback givers in the current team
-                            boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                                      && isGroupByTeamEnabled
-                                                      && !team.equals(Const.GENERAL_QUESTION)
-                                                      && (!team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) 
-                                                          && section.equals(Const.DEFAULT_SECTION));
-
-
-                            if (isGroupByTeamEnabled && !isAnonymousTeam) {
-                                givers = data.bundle.getMembersOfNonAnonymousTeam(team);
-                                givers.remove(Const.GENERAL_QUESTION); // remove %GENERAL% (No specific participant) as it cannot be a givers
-                            } else if (isGroupByTeamEnabled && isAnonymousTeam) {
-                                // handles the case where the team is of an anonymous giver, the only member in the team is the giver himself
-                                // e.g. Anonymous teams are "Anonymous student .*'s Team" => the only student in the team is "Anonymous student .*"
-                                givers = new ArrayList<String>();
-                                String giverName = team;
-                                giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
-                                givers.add(giverName);
-                            } else if (!isGroupByTeamEnabled && !isAnonymousTeam) { 
-                                givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
-                                boolean isSectionContainingAnonymousGivers = data.bundle.anonymousGiversInSection.containsKey(section);
-                                if (isSectionContainingAnonymousGivers) {
-                                    for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
-                                        givers.add(anonymousGiver);
-                                    }
-                                }
-                            } else {
-                                givers = new ArrayList<String>();
-                                String giverName = team;
-                                giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
-                                givers.add(giverName);
-
-                                for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
-                                   givers.add(anonymousGiver);
-                                }
-                            }
-                            // add team to possible givers (to handle questions where the giver is TEAM)
-                            if (data.bundle.existingRecipientsForGiver.containsKey(team)) {
-                                givers.add(team);
-                            }
+                            boolean isAnonymousTeam = data.bundle.isAnonymousTeam(section, team, isGroupByTeamEnabled);
+                            List<String> givers = data.bundle.getPossibleGiversInTeam(isGroupByTeamEnabled, isAnonymousTeam, section, team);
                             
                             if (isGroupByTeamEnabled) {
                                 // Display header of group
@@ -307,7 +272,7 @@
                             for (String giver : givers) {
                                 String giverIdentifier = giver.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                                 giverIdentifier = data.bundle.getNameFromEmail(giverIdentifier);
-                                String mailtoStyleAttr = (giverIdentifier.contains("@@"))?"style=\"display:none;\"":"";
+                                String mailtoStyleAttr = (giverIdentifier.contains("@@")) ? "style=\"display:none;\"" : "";
 
                                 // Display header of giver
                     %>
@@ -359,7 +324,9 @@
                                 <div class="panel-body">
 
                         <%
-                                boolean isGiverWithResponses = data.bundle.existingRecipientsForGiver.containsKey(giver);
+                                boolean isGiverWithResponses = team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) ?
+                                                               data.bundle.isInstructorGiver(giver) :
+                                                               data.bundle.isStudentGiver(giver);
                                 if (!isGiverWithResponses) {
                                     // display 'no responses' msg
                                     %>
@@ -369,9 +336,10 @@
                                         </div>
                                     <%
                                     continue; // skip to the next giver
-
-                                } else if (data.bundle.existingRecipientsForGiver.containsKey(giver)) {
-                                    List<String> existingRecipientsForGiver = new ArrayList<String>(data.bundle.existingRecipientsForGiver.get(giver));
+                                } else {
+                                    List<String> existingRecipientsForGiver = team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) ? 
+                                                                      new ArrayList<String>(data.bundle.existingRecipientsForInstructorGiver.get(giver)) :
+                                                                      new ArrayList<String>(data.bundle.existingRecipientsForStudentGiver.get(giver));
                                     
                                     Collections.sort(existingRecipientsForGiver);
                                     int recipientIndex = 1;
@@ -387,13 +355,12 @@
                                                     // no response for current (question, giver, recipient)
                                                     continue;   
                                                 }
-                                                FeedbackResponseAttributes singleResponse = data.bundle.getFeedbackResponse(questionId, giver, recipient);
-
+                                                FeedbackResponseAttributes singleResponse = data.bundle.getFeedbackResponse(
+                                                                                                        questionId, giver, recipient);
                                                 boolean isResponseInRightSection = singleResponse.giverSection.equals(section);
-                                                if (!isResponseInRightSection) {
-                                                    continue;
+                                                if (isResponseInRightSection) {
+                                                    isResponseBetweenGiverAndRecipientExist = true;
                                                 }
-                                                isResponseBetweenGiverAndRecipientExist = true;
                                         }
 
                                         if (!isResponseBetweenGiverAndRecipientExist) {
