@@ -82,9 +82,9 @@
                                         </div>
                                         <div class="col-sm-3">
                                             <div class="pull-right">
-                                                <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
+                                                <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
                                                     Expand
-                                                    <%= isGroupByTeamEnabled == true ? " Teams" : " Students" %>
+                                                    <%= isGroupByTeamEnabled ? " Teams" : " Students" %>
                                                 </a>
                                                 &nbsp;
                                                 <div class="display-icon" style="display:inline;">
@@ -123,9 +123,9 @@
                                             </div>
                                             <div class="col-sm-3">
                                                 <div class="pull-right">
-                                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
+                                                    <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.' style="display:none;">
                                                         Expand
-                                                        <%=isGroupByTeamEnabled == true ? " Teams" : " Students"%>
+                                                        <%=isGroupByTeamEnabled ? " Teams" : " Students"%>
                                                     </a>
                                                     &nbsp;
                                                     <div class="display-icon" style="display:inline;">
@@ -204,7 +204,7 @@
                                     </div>
                                     <div class="col-sm-3">
                                         <div class="pull-right">
-                                            <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled == true ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
+                                            <a class="btn btn-success btn-xs" id="collapse-panels-button-section-<%=sectionIndex%>" data-toggle="tooltip" title='Collapse or expand all <%=isGroupByTeamEnabled ? "team" : "student"%> panels. You can also click on the panel heading to toggle each one individually.'>
                                                 <%=shouldCollapsed ? "Expand " : "Collapse "%>
                                                 <%=isGroupByTeamEnabled ? "Teams" : "Students"%>
                                             </a>
