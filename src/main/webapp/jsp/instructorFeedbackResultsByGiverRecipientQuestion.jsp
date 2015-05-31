@@ -6,6 +6,7 @@
 <%@ page import="java.util.HashSet"%>
 <%@ page import="java.util.ArrayList"%>
 <%@ page import="java.util.Collections"%>
+<%@ page import="java.util.LinkedHashSet"%>
 <%@ page import="teammates.common.util.Const"%>
 <%@ page import="teammates.common.util.FieldValidator"%>
 <%@ page import="teammates.common.datatransfer.FeedbackParticipantType"%>
@@ -188,7 +189,10 @@
                     int sectionIndex = 0;
                     int teamIndex = 0;
 
-                    Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();                    
+                    Set<String> sectionsInCourse = new LinkedHashSet<String>();
+                    sectionsInCourse.add(Const.DEFAULT_SECTION);
+                    sectionsInCourse.addAll(data.bundle.rosterSectionTeamNameTable.keySet());
+
                     for (String section : sectionsInCourse) {
                         giverIndex++;
 
@@ -219,7 +223,7 @@
 
                         List<String> giverTeams;
                         if (groupByTeamEnabled) {
-                            giverTeams = new ArrayList<String>(data.bundle.rosterSectionTeamNameTable.get(section));
+                            giverTeams = new ArrayList<String>(data.bundle.getMembersOfSection(section));
                         } else {
                             giverTeams = new ArrayList<String>();
                             giverTeams.add(Const.DEFAULT_SECTION);
@@ -228,40 +232,50 @@
                         if (data.bundle.anonymousGiversInSection.containsKey(section)) {
                             Set<String> anonymousGivers = data.bundle.anonymousGiversInSection.get(section); 
                             for (String anonymousGiver : anonymousGivers) {
-                                giverTeams.add(anonymousGiver);
+                                giverTeams.add(data.bundle.getTeamNameForEmail(anonymousGiver));
                             }
                         }
 
-                        // Iterate through the teams. If not grouped by team, a dummy team value is iterated through once.
+                        // Iterate through the teams. If not grouped by team, a dummy team value, DEFAULT_SECTION, is iterated through once.
                         for (String team : giverTeams) {
                             List<String> givers;
 
                             // Prepare feedback givers in the current team
                             boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                                      && team != Const.DEFAULT_SECTION;
+                                                      && groupByTeamEnabled
+                                                      && !team.equals(Const.GENERAL_QUESTION)
+                                                      && (!team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) 
+                                                          && section.equals(Const.DEFAULT_SECTION));
+
 
                             if (groupByTeamEnabled && !isAnonymousTeam) {
                                 givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
                             } else if (groupByTeamEnabled && isAnonymousTeam) {
+                                // handles the case where the team is of an anonymous giver, the only member in the team is the giver himself
+                                // e.g. Anonymous teams are "Anonymous student .*'s Team" => the only student in the team is "Anonymous student .*"
                                 givers = new ArrayList<String>();
                                 String giverName = team;
                                 giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                                 givers.add(giverName);
                             } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
                                 givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
-                                if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                                boolean isSectionContainingAnonymousGivers = data.bundle.anonymousGiversInSection.containsKey(section);
+                                if (isSectionContainingAnonymousGivers) {
                                     for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                                         givers.add(anonymousGiver);
                                     }
                                 }
                             } else {
                                 givers = new ArrayList<String>();
+                                String giverName = team;
+                                giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                                givers.add(giverName);
 
                                 for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                                    givers.add(anonymousGiver);
                                 }
                             }
-                            // add team to possible givers (for questions where the giver is TEAM)
+                            // add team to possible givers (to handle questions where the giver is TEAM)
                             if (data.bundle.existingRecipientsForGiver.containsKey(team)) {
                                 givers.add(team);
                             }
@@ -365,6 +379,30 @@
                                     for (String recipient : existingRecipientsForGiver) {
                                         String recipientIdentifier = data.bundle.getNameFromEmail(recipient);
 
+                                        boolean isResponseBetweenGiverAndRecipientExist = false;
+                                        for (Map.Entry<String, FeedbackQuestionAttributes> questionEntry : data.bundle.questions.entrySet()) {
+                                                String questionId = questionEntry.getKey();
+                                                FeedbackQuestionAttributes question = questionEntry.getValue();
+
+                                                if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) 
+                                                    || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                    // no response for current (question, giver, recipient)
+                                                    continue;   
+                                                }
+                                                FeedbackResponseAttributes singleResponse = responseBundle.get(questionId).get(giver).get(recipient);
+
+                                                boolean isResponseInRightSection = singleResponse.giverSection.equals(section);
+                                                if (!isResponseInRightSection) {
+                                                    continue;
+                                                }
+
+                                                isResponseBetweenGiverAndRecipientExist = true;
+                                        }
+
+                                        if (!isResponseBetweenGiverAndRecipientExist) {
+                                            continue;
+                                        }
+
                         %>
                                         <div class="row <%=recipientIndex == 1? "": "border-top-gray"%>">
                                           <div class="col-md-2">
@@ -410,11 +448,17 @@
                                                 String questionId = questionEntry.getKey();
                                                 FeedbackQuestionAttributes question = questionEntry.getValue();
 
-                                                if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
+                                                if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver) 
+                                                    || !responseBundle.get(questionId).get(giver).containsKey(recipient)) {
                                                     // no response for current (question, giver, recipient)
                                                     continue;   
                                                 }
                                                 FeedbackResponseAttributes singleResponse = responseBundle.get(questionId).get(giver).get(recipient);
+
+                                                boolean isResponseInRightSection = singleResponse.giverSection.equals(section);
+                                                if (!isResponseInRightSection) {
+                                                    continue;
+                                                }
                                                 FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
 
                                                 // start of response display, includes UI for adding/editing comments

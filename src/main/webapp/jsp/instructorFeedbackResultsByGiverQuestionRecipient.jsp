@@ -6,6 +6,7 @@
 <%@ page import="java.util.HashSet"%>
 <%@ page import="java.util.ArrayList"%>
 <%@ page import="java.util.Collections"%>
+<%@ page import="java.util.LinkedHashSet"%>
 <%@ page import="teammates.common.util.Const"%>
 <%@ page import="teammates.common.util.FieldValidator"%>
 <%@ page import="teammates.common.datatransfer.FeedbackParticipantType"%>
@@ -180,7 +181,11 @@
                     int teamIndex = 0;
 
                     List<String> questionIds = data.bundle.getQuestionIdsSortedByQuestionNumber();
-                    Set<String> sectionsInCourse = data.bundle.rosterSectionTeamNameTable.keySet();
+
+                    Set<String> sectionsInCourse = new LinkedHashSet<String>();
+                    sectionsInCourse.add(Const.DEFAULT_SECTION);
+                    sectionsInCourse.addAll(data.bundle.rosterSectionTeamNameTable.keySet());
+
                     for (String section : sectionsInCourse) {
                         sectionIndex++;
                         // Display header of section
@@ -208,7 +213,7 @@
                     <%
                         List<String> giverTeams;
                         if (groupByTeamEnabled) {
-                            giverTeams = new ArrayList<String>(data.bundle.rosterSectionTeamNameTable.get(section));
+                            giverTeams = new ArrayList<String>(data.bundle.getMembersOfSection(section));
                         } else {
                             giverTeams = new ArrayList<String>();
                             giverTeams.add(Const.DEFAULT_SECTION);
@@ -227,24 +232,34 @@
 
                             // Prepare feedback givers in the current team
                             boolean isAnonymousTeam = !data.bundle.rosterTeamNameMembersTable.containsKey(team)
-                                                      && team != Const.DEFAULT_SECTION;
+                                                      && groupByTeamEnabled
+                                                      && !team.equals(Const.GENERAL_QUESTION)
+                                                      && (!team.equals(Const.USER_TEAM_FOR_INSTRUCTOR) 
+                                                          && section.equals(Const.DEFAULT_SECTION));
 
                             if (groupByTeamEnabled && !isAnonymousTeam) {
                                 givers = new ArrayList<String>(data.bundle.rosterTeamNameMembersTable.get(team));
                             } else if (groupByTeamEnabled && isAnonymousTeam) {
+                                // handles the case where the team is of an anonymous giver, the only member in the team is the giver himself
+                                // e.g. Anonymous teams are "Anonymous student .*'s Team" => the only student in the team is "Anonymous student .*"
                                 givers = new ArrayList<String>();
                                 String giverName = team;
                                 giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                                 givers.add(giverName);
                             } else if (!groupByTeamEnabled && !isAnonymousTeam) { 
                                 givers = new ArrayList<String>(data.bundle.rosterSectionStudentTable.get(section));
-                                if (data.bundle.anonymousGiversInSection.containsKey(section)) {
+                                boolean isSectionContainingAnonymousGivers = data.bundle.anonymousGiversInSection.containsKey(section);
+                                if (isSectionContainingAnonymousGivers) {
                                     for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                                         givers.add(anonymousGiver);
                                     }
                                 }
                             } else {
                                 givers = new ArrayList<String>();
+                                String giverName = team;
+                                giverName.replace(Const.TEAM_OF_EMAIL_OWNER, "");
+                                givers.add(giverName);
+
                                 for (String anonymousGiver : data.bundle.anonymousGiversInSection.get(section)) {
                                     givers.add(anonymousGiver);
                                 }
@@ -286,6 +301,7 @@
                                         }
 
                                         FeedbackQuestionAttributes question = questions.get(questionId);
+
                                         FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
                                         String statsHtml = questionDetails.getQuestionResultStatisticsHtml(
                                                                                 data.bundle.mapOfQuestionResponsesForGiverTeam.get(team).
@@ -307,6 +323,7 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                            <hr>
                                 <%
                                         }
                                     }
@@ -316,6 +333,10 @@
                                     } else {
                             %>
                                         <p class="text-color-gray"><i>No statistics available.</i></p>
+
+                            <%
+                                    }
+                            %>  
                                         <div class="row">
                                         <div class="col-sm-9">
                                             <h3><%=team%> Detailed Responses </h3>
@@ -328,7 +349,6 @@
                                     </div>
                                     <hr class="margin-top-0">
                             <%
-                                    }
                                 
                             }   // end of team statistics
                             else {
@@ -425,20 +445,12 @@
                                         for (String questionId : questionIds) {
                                             FeedbackQuestionAttributes question = data.bundle.questions.get(questionId);
                                             FeedbackQuestionDetails questionDetails = question.getQuestionDetails();
-                                            if (!responseBundle.containsKey(questionId) || !responseBundle.get(questionId).containsKey(giver)) {
-                                                // no response for current (question, giver, *)
-                                                continue;   
-                                            }
+
 
                                             questionIndex += 1;
 
-                                            // Get all responses from the giver
+                                            // Get all responses from the giver for the question with id questionId
                                             List<FeedbackResponseAttributes> responsesFromGiver = new ArrayList<FeedbackResponseAttributes>();
-
-                                            boolean isResponsesEmpty = !data.bundle.existingRecipientsForGiver.containsKey(giver);
-                                            if (isResponsesEmpty) {
-                                                break;
-                                            }
 
                                             List<String> recipients = new ArrayList<String>(data.bundle.existingRecipientsForGiver.get(giver));
                                             for (String recipient : recipients) {
@@ -448,7 +460,19 @@
                                                 if (!isExistingResponse) {
                                                     continue;
                                                 }
+                                                FeedbackResponseAttributes feedbackResponse = responseBundle.get(questionId).get(giver).get(recipient);
+
+                                                boolean isResponseInRightSection = feedbackResponse.giverSection.equals(section);
+                                                if (!isResponseInRightSection) {
+                                                    continue;
+                                                }
+
                                                 responsesFromGiver.add(responseBundle.get(questionId).get(giver).get(recipient));
+                                            }
+
+                                            if (responsesFromGiver.isEmpty()) {
+                                                // no response for current (question, giver, *)
+                                                continue;   
                                             }
                                     %>
                                             <div class="panel panel-info">

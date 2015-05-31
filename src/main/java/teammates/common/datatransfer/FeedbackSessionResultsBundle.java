@@ -41,7 +41,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     
     // Recipients of existing responses by the specified giver
     public Map<String, Set<String>> existingRecipientsForGiver = null;
-    // Givers of existing responses received the specified recipient
+    // Givers of existing responses received by the specified recipient
     public Map<String, Set<String>> existingGiversForRecipient = null;
     
     public Map<String, Set<String>> anonymousRecipientsInSection = null;
@@ -51,6 +51,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     public Map<String, Map<String, List<FeedbackResponseAttributes>>> mapOfQuestionResponsesForGiverTeam;
     // TODO Used for computation of statistics in Recipient > Question > Giver View
     public Map<String, Map<String, List<FeedbackResponseAttributes>>> mapOfQuestionResponsesForRecipientTeam;
+    
+    Map<String, Map<String, Map<String, FeedbackResponseAttributes>>> responseBundle;
     
     public FeedbackSessionResponseStatus responseStatus = null;
     public CourseRoster roster = null;
@@ -127,6 +129,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.rosterTeamNameMembersTable = getTeamNameToEmailsTableFromRoster(roster);
         this.rosterSectionTeamNameTable = getSectionToTeamNamesFromRoster(roster);
         this.rosterSectionStudentTable = getSectionStudentTableFromRoster(roster);
+        
+        this.responseBundle =  getResponseBundle();
     }
     
     
@@ -198,6 +202,8 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         mapOfQuestionResponsesForGiverTeam = new HashMap<String, Map<String, List<FeedbackResponseAttributes>>>();
         
         for (FeedbackResponseAttributes response : responses) {
+            FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
+            
             String giver = response.giverEmail;
             String giverTeam = getTeamNameForEmail(giver);
             
@@ -260,6 +266,21 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
                 response.giverEmail = anonEmail;
             }
         }
+    }
+    
+    public boolean isResponseExist(String questionId, 
+                                   String giver, 
+                                   String recipient) {
+        
+        return  !responseBundle.containsKey(questionId) 
+             || !responseBundle.get(questionId).containsKey(giver)
+             || !responseBundle.get(questionId).get(giver).containsKey(recipient);
+    }
+    
+    public FeedbackResponseAttributes getFeedbackResponse(String questionId, 
+                                                          String giver, 
+                                                          String recipient) {
+        return responseBundle.get(questionId).get(giver).get(recipient);
     }
 
     /**
@@ -480,6 +501,22 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         }
     }
 
+    public List<String> getMembersOfSection(String section) {
+        if (rosterSectionTeamNameTable.containsKey(section)) {
+            return new ArrayList<String>(rosterSectionTeamNameTable.get(section));
+            
+        } else if (section.equals(Const.DEFAULT_SECTION)) {
+            List<String> specialParticipants = new ArrayList<String>();
+            specialParticipants.add(Const.GENERAL_QUESTION);
+            specialParticipants.add(Const.USER_TEAM_FOR_INSTRUCTOR);
+            return specialParticipants;
+            
+        } else {
+            Assumption.fail();
+        }
+        
+        return null;
+    }
     /**
      * Get the emails of the students given a teamName,
      * if teamName is "Instructors", returns the list of instructors.
