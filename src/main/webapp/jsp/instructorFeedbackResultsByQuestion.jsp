@@ -159,11 +159,19 @@
                                 <tbody>
                             <%
 
-                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);       
+                            List<String> possibleGivers = data.bundle.getPossibleGivers(question);
+                            if (data.bundle.anonymousGiversForQuestion.containsKey(questionId)) {
+                                possibleGivers.addAll(data.bundle.anonymousGiversForQuestion.get(questionId));
+                            }
+
                             for (String giver : possibleGivers) {
                                 List<String> possibleReceivers = question.giverType.isTeam() ? 
                                                                  data.bundle.getPossibleRecipients(question, data.bundle.getFullNameFromRoster(giver)) :
                                                                  data.bundle.getPossibleRecipients(question, giver);
+
+                                if (data.bundle.existingRecipientsForStudentGiver.containsKey(giver)) {
+                                    possibleReceivers.addAll(data.bundle.existingRecipientsForStudentGiver.get(giver));
+                                }
  
                                 for (String recipient : possibleReceivers) {
                                     //initialise parameters used for modifying appearance
@@ -181,16 +189,21 @@
 
                                     FeedbackResponseAttributes responseForQuestionGiverRecipient = null;
                                     boolean isGiverAnonymous = !data.bundle.isGiverVisibleToInstructor(question);
-                                    if (isGiverAnonymous && !data.instructor.email.equals(giver)) {
+                                    boolean isCurrentUserResponseGiver = data.instructor.email.equals(giver);
+                                    if (isGiverAnonymous && !isCurrentUserResponseGiver) {
                                         FeedbackParticipantType participantType = question.giverType;
-                                        giverDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(giver));
+                                        giverDisplayableIdentifier = participantType.isTeam() ? 
+                                                                     giver:
+                                                                     data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(giver));
                                     } else {
                                         giverDisplayableIdentifier = giver;
                                     }
                                     boolean isRecipientAnonymous = !data.bundle.isRecipientVisibleToInstructor(question);
-                                    if (isRecipientAnonymous && !data.instructor.email.equals(giver)) {
+                                    if (isRecipientAnonymous && !isCurrentUserResponseGiver) {
                                         FeedbackParticipantType participantType = question.recipientType;
-                                        recipientDisplayableIdentifier = data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(recipient));
+                                        recipientDisplayableIdentifier = participantType.isTeam() ? 
+                                                                         giver:
+                                                                         data.bundle.getAnonEmail(participantType, data.bundle.getFullNameFromRoster(giver));
                                     } else {
                                         recipientDisplayableIdentifier = recipient;
                                     }
@@ -211,9 +224,7 @@
 
                                             isShowingMissingResponseRow = true;
 
-                                            // prepare data for 'missing' response row.
-                                            // depending on whether the giver/recipient is anonymous,
-                                            // populate the 
+                                            // prepare data for 'missing' response row
                                             giverName = data.bundle.isGiverVisibleToInstructor(question) ? 
                                                         data.bundle.getFullNameFromRoster(giverDisplayableIdentifier) :
                                                         data.bundle.getNameForEmail( giverDisplayableIdentifier);
@@ -231,7 +242,7 @@
                                         } else {
                                             // skip to next recipient
                                             // since there is no need to display any row for this (questionId, giver, recipient)
-                                            // due to visibility options
+                                            // due to restricted visibility options
                                             continue;
                                         }
                                     } else {

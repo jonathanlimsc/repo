@@ -142,6 +142,8 @@ public class InstructorFeedbackResultsPageAction extends Action {
 
         switch (data.sortType) {
             case "question":
+                data.bundle.constructTablesForAnonymousGiversForQuestionFromResponses();
+                data.bundle.constructTablesForPossibleAndAnonymousGiversFromResponses();
                 return createShowPageResult(
                         Const.ViewURIs.INSTRUCTOR_FEEDBACK_RESULTS_BY_QUESTION, data);
             case "recipient-giver-question":

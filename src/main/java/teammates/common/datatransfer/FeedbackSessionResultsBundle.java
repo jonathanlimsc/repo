@@ -48,6 +48,7 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     
     public Map<String, Set<String>> anonymousRecipientsInSection = null;
     public Map<String, Set<String>> anonymousGiversInSection = null;
+    public Map<String, Set<String>> anonymousGiversForQuestion = null;
     
     // Used for computation of statistics in Giver > Question > Recipient View
     public Map<String, Map<String, List<FeedbackResponseAttributes>>> mapOfQuestionResponsesForGiverTeam;
@@ -135,11 +136,37 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         this.responseBundle = getResponseBundle();
     }
     
+    public void constructTablesForAnonymousGiversForQuestionFromResponses() {
+        anonymousGiversForQuestion = new HashMap<String, Set<String>>();
+        for (FeedbackResponseAttributes response : this.responses) {
+            if (!isResponseGiverVisible(response)) {
+                String questionId = response.feedbackQuestionId;
+                FeedbackQuestionAttributes question = questions.get(questionId);
+                
+                String giverIdentifier = response.giverEmail;
+                
+                if (question.giverType.isTeam() 
+                    && !rosterTeamNameMembersTable.containsKey(giverIdentifier)) { // anonymous team
+                    // Assumptions: an anonymous team only has one members, which
+                    // is the anonymous student who gave the response
+                    giverIdentifier = emailTeamNameTable.get(giverIdentifier);
+                }
+ 
+                if (anonymousGiversForQuestion.containsKey(questionId)) {
+                    Set<String> anonymousGivers = anonymousGiversForQuestion.get(questionId);
+                    anonymousGivers.add(giverIdentifier);
+                } else {
+                    Set<String> anonymousGivers = new HashSet<String>();
+                    anonymousGivers.add(giverIdentifier);
+                    anonymousGiversForQuestion.put(questionId, anonymousGivers);
+                }
+            }
+        }
+    }
     
     public void constructTablesForPossibleAndAnonymousGiversFromResponses() {
         existingRecipientsForStudentGiver = new HashMap<String, Set<String>>();
         existingRecipientsForInstructorGiver = new HashMap<String, Set<String>>();
-        existingGiversForRecipient = new HashMap<String, Set<String>>();
         
         for (FeedbackResponseAttributes response : this.responses) {
             FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
@@ -147,18 +174,18 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
             
             if (question.giverType == FeedbackParticipantType.INSTRUCTORS 
                 || question.giverType == FeedbackParticipantType.SELF) {
-                if (existingRecipientsForStudentGiver.containsKey(giverIdentifier)) {
-                    Set<String> recipientsForGiver = existingRecipientsForStudentGiver.get(giverIdentifier);
+                if (existingRecipientsForInstructorGiver.containsKey(giverIdentifier)) {
+                    Set<String> recipientsForGiver = existingRecipientsForInstructorGiver.get(giverIdentifier);
                     recipientsForGiver.add(response.recipientEmail);
                 } else {
-                    Set<String> recipientsForGiver = new HashSet<>();
+                    Set<String> recipientsForGiver = new HashSet<String>();
                     recipientsForGiver.add(response.recipientEmail);
-                    existingRecipientsForStudentGiver.put(giverIdentifier, recipientsForGiver);
+                    existingRecipientsForInstructorGiver.put(giverIdentifier, recipientsForGiver);
                 }
             }
             
             // normalise the giver name i.e. ".*'s team" converted to actual team name
-            if (question.giverType.isTeam()) {
+            if (question.giverType.isTeam() && isResponseGiverVisible(response)) {
                 giverIdentifier = response.giverEmail.replace(Const.TEAM_OF_EMAIL_OWNER, "");
                 giverIdentifier = getTeamNameForEmail(giverIdentifier);
             } 
@@ -176,16 +203,18 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         anonymousGiversInSection = new HashMap<String, Set<String>>();
        
         for (FeedbackResponseAttributes response : this.responses) {
-            if (!isResponseGiverVisible(response)) {
-                String sectionName = response.giverSection;
-                if (anonymousGiversInSection.containsKey(sectionName)) {
-                    Set<String> anonymousGivers = anonymousGiversInSection.get(sectionName);
-                    anonymousGivers.add(response.giverEmail);
-                } else {
-                    Set<String> anonymousGivers = new HashSet<>();
-                    anonymousGivers.add(response.giverEmail);
-                    anonymousGiversInSection.put(sectionName, anonymousGivers);
-                }
+            if (isResponseGiverVisible(response)) {
+                continue;
+            }
+            
+            String sectionName = response.giverSection;
+            if (anonymousGiversInSection.containsKey(sectionName)) {
+                Set<String> anonymousGivers = anonymousGiversInSection.get(sectionName);
+                anonymousGivers.add(response.giverEmail);
+            } else {
+                Set<String> anonymousGivers = new HashSet<String>();
+                anonymousGivers.add(response.giverEmail);
+                anonymousGiversInSection.put(sectionName, anonymousGivers);
             }
         }
     }
@@ -194,10 +223,11 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
         mapOfQuestionResponsesForGiverTeam = new HashMap<String, Map<String, List<FeedbackResponseAttributes>>>();
         
         for (FeedbackResponseAttributes response : responses) {
-            //FeedbackQuestionAttributes question = questions.get(response.feedbackQuestionId);
-            
             String giver = response.giverEmail;
             String giverTeam = getTeamNameForEmail(giver);
+            if (!rosterTeamNameMembersTable.containsKey(giverTeam)) { // anonymous team
+                giverTeam = giver;
+            }
             
             if (mapOfQuestionResponsesForGiverTeam.containsKey(giverTeam)) {
                 Map<String, List<FeedbackResponseAttributes>> questionToResponseMap = mapOfQuestionResponsesForGiverTeam.get(giverTeam);
