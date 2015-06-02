@@ -479,7 +479,7 @@
                                             	String giverName = data.bundle.getGiverNameForResponse(question, responseEntry);
                                                 String giverTeamName = data.bundle.getTeamNameForEmail(responseEntry.giverEmail);
                                                 
-                                                if (!data.bundle.isGiverVisible(responseEntry)) {
+                                                if (!data.bundle.isResponseGiverVisible(responseEntry)) {
                                                     // do not show possible givers if givers are anonymised
                                                 	possibleGiversToRecipient.clear();
                                                 }
@@ -521,7 +521,7 @@
                                                         boolean isAllowedToModerate = data.instructor.isAllowedForPrivilege(data.bundle.getSectionFromRoster(responseEntry.giverEmail), 
                                                                                                                         data.feedbackSessionName, 
                                                                                                                         Const.ParamsNames.INSTRUCTOR_PERMISSION_MODIFY_SESSION_COMMENT_IN_SECTIONS);
-                                                        Boolean isGiverVisible = data.bundle.isGiverVisible(responseEntry);
+                                                        Boolean isGiverVisible = data.bundle.isResponseGiverVisible(responseEntry);
                                                         String disabledAttribute = (!isAllowedToModerate) ? "disabled=\"disabled\"" : "";
                                                         if (isGiverVisible) {                                        
                                                     %>

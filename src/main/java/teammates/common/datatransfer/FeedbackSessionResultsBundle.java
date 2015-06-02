@@ -524,20 +524,22 @@ public class FeedbackSessionResultsBundle implements SessionResultsBundle {
     }
 
     public List<String> getMembersOfSection(String section) {
+        List<String> sectionMembers = new ArrayList<String>();
+        
         if (rosterSectionTeamNameTable.containsKey(section)) {
-            return new ArrayList<String>(rosterSectionTeamNameTable.get(section));
+            sectionMembers.addAll(rosterSectionTeamNameTable.get(section));
             
-        } else if (section.equals(Const.DEFAULT_SECTION)) {
+        } 
+        
+        if (section.equals(Const.DEFAULT_SECTION)) {
             List<String> specialParticipants = new ArrayList<String>();
             specialParticipants.add(Const.GENERAL_QUESTION);
             specialParticipants.add(Const.USER_TEAM_FOR_INSTRUCTOR);
-            return specialParticipants;
             
-        } else {
-            Assumption.fail();
-        }
+            sectionMembers.addAll(specialParticipants);
+        } 
         
-        return null;
+        return sectionMembers;
     }
     
     public List<String> getMembersOfNonAnonymousTeam(String teamName) {

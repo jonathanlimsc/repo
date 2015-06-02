@@ -385,7 +385,7 @@
                     for (Map.Entry<String, List<FeedbackResponseAttributes>> responsesForRecipientFromGiver : responsesForRecipient.getValue().entrySet()) {
                         giverIndex++;
                         String giverEmail = responsesForRecipientFromGiver.getValue().get(0).giverEmail;
-                        Boolean isGiverVisible = data.bundle.isGiverVisible(responsesForRecipientFromGiver.getValue().get(0));
+                        Boolean isGiverVisible = data.bundle.isResponseGiverVisible(responsesForRecipientFromGiver.getValue().get(0));
                 %>
                         <div class="row <%=giverIndex == 1? "": "border-top-gray"%>">
                             <div class="col-md-2">
